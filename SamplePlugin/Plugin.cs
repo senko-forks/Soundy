@@ -1,81 +1,103 @@
-﻿using Dalamud.Game.Command;
+using Dalamud.Game.Command;
+using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
-using System.IO;
-using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
+using System.IO;
 using SamplePlugin.Windows;
+using ECommons;
+using ECommons.Automation;
+using ECommons.DalamudServices;
 
-namespace SamplePlugin;
 
-public sealed class Plugin : IDalamudPlugin
+namespace SamplePlugin
 {
-    [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
-    [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
-    [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
-    [PluginService] internal static IClientState ClientState { get; private set; } = null!;
-    [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
-    [PluginService] internal static IPluginLog Log { get; private set; } = null!;
-
-    private const string CommandName = "/pmycommand";
-
-    public Configuration Configuration { get; init; }
-
-    public readonly WindowSystem WindowSystem = new("SamplePlugin");
-    private ConfigWindow ConfigWindow { get; init; }
-    private MainWindow MainWindow { get; init; }
-
-    public Plugin()
+    public sealed class Plugin : IDalamudPlugin
     {
-        Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+        // Dalamud Services
+        [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
+        [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
+        [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
+        [PluginService] internal static IClientState ClientState { get; private set; } = null!;
+        [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
+        [PluginService] internal static IPluginLog Log { get; private set; } = null!;
 
-        // you might normally want to embed resources and load them from the manifest stream
-        var goatImagePath = Path.Combine(PluginInterface.AssemblyLocation.Directory?.FullName!, "goat.png");
+        public string Name => "YT Import for Yue's Dj";
 
-        ConfigWindow = new ConfigWindow(this);
-        MainWindow = new MainWindow(this, goatImagePath);
+        private const string CommandName = "/ytimport";
 
-        WindowSystem.AddWindow(ConfigWindow);
-        WindowSystem.AddWindow(MainWindow);
+        public Configuration Configuration { get; init; }
 
-        CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
+        private readonly WindowSystem windowSystem = new("YT Import for Yue's Dj");
+
+        private ConfigWindow configWindow;
+        private MainWindow mainWindow;
+
+        public Plugin()
         {
-            HelpMessage = "A useful message to display in /xlhelp"
-        });
+            // 1) Config laden (oder neu)
+            Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+            ResourceChecker.CheckResources();
 
-        PluginInterface.UiBuilder.Draw += DrawUI;
+            // 2) Tools entpacken (yt-dlp, ffmpeg)
+            ToolLoader.ExtractTools();
 
-        // This adds a button to the plugin installer entry of this plugin which allows
-        // to toggle the display status of the configuration ui
-        PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
+            ECommonsMain.Init(PluginInterface, this);
 
-        // Adds another button that is doing the same but for the main ui of the plugin
-        PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
+            // 3) GUI-Fenster anlegen
+            configWindow = new ConfigWindow(this);
+            mainWindow = new MainWindow(this);
 
-        // Add a simple message to the log with level set to information
-        // Use /xllog to open the log window in-game
-        // Example Output: 00:57:54.959 | INF | [SamplePlugin] ===A cool log message from Sample Plugin===
-        Log.Information($"===A cool log message from {PluginInterface.Manifest.Name}===");
+            windowSystem.AddWindow(configWindow);
+            windowSystem.AddWindow(mainWindow);
+
+            // 4) Slash-Command
+            CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
+            {
+                HelpMessage = "Open the YT Import for Yue's Dj main window."
+            });
+
+            // 5) UI-Callbacks
+            PluginInterface.UiBuilder.Draw += DrawUI;
+            PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
+            PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
+
+            Log.Information("=== YT Import for Yue's Dj is loaded ===");
+        }
+
+        public void Dispose()
+        {
+            // Fenster entfernen
+            windowSystem.RemoveAllWindows();
+
+            // Fenster disposen
+            configWindow?.Dispose();
+            mainWindow?.Dispose();
+
+            // Command entfernen
+            CommandManager.RemoveHandler(CommandName);
+
+            // Config speichern
+            Configuration.Save();
+        }
+
+        private void OnCommand(string command, string args)
+        {
+            // Toggle Main Window
+            ToggleMainUI();
+        }
+
+        public void RefreshMods()
+        {
+            Svc.Framework.RunOnTick(() =>
+            {
+                Chat.Instance.SendMessage("/penumbra reload mods");
+            });
+        }
+
+        private void DrawUI() => windowSystem.Draw();
+
+        public void ToggleConfigUI() => configWindow.Toggle();
+        public void ToggleMainUI() => mainWindow.Toggle();
     }
-
-    public void Dispose()
-    {
-        WindowSystem.RemoveAllWindows();
-
-        ConfigWindow.Dispose();
-        MainWindow.Dispose();
-
-        CommandManager.RemoveHandler(CommandName);
-    }
-
-    private void OnCommand(string command, string args)
-    {
-        // in response to the slash command, just toggle the display status of our main ui
-        ToggleMainUI();
-    }
-
-    private void DrawUI() => WindowSystem.Draw();
-
-    public void ToggleConfigUI() => ConfigWindow.Toggle();
-    public void ToggleMainUI() => MainWindow.Toggle();
 }

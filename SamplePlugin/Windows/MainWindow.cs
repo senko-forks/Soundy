@@ -1,105 +1,156 @@
-﻿using System;
+using System;
+using System.IO;
 using System.Numerics;
+using System.Threading.Tasks; // Wichtig für async/await
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
+using BuildScd;
 using ImGuiNET;
 using Lumina.Excel.Sheets;
 
-namespace SamplePlugin.Windows;
-
-public class MainWindow : Window, IDisposable
+namespace SamplePlugin.Windows
 {
-    private string GoatImagePath;
-    private Plugin Plugin;
-
-    // We give this window a hidden ID using ##
-    // So that the user will see "My Amazing Window" as window title,
-    // but for ImGui the ID is "My Amazing Window##With a hidden ID"
-    public MainWindow(Plugin plugin, string goatImagePath)
-        : base("My Amazing Window##With a hidden ID", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
+    public class MainWindow : Window, IDisposable
     {
-        SizeConstraints = new WindowSizeConstraints
+        private Plugin plugin;
+        private string goatImagePath;
+
+        // Eingabefeld
+        private string saveName = "";
+        private string youtubeLink = "";
+        private string playlist = "";
+
+        private string proccessState = "";
+
+        // Damit wir eine laufende Aufgabe tracken können
+        private Task? currentDownloadTask;
+
+        public MainWindow(Plugin plugin)
+            : base(
+                "YT Import",
+                ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
         {
-            MinimumSize = new Vector2(375, 330),
-            MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
-        };
+            this.SizeConstraints = new WindowSizeConstraints
+            {
+                MinimumSize = new Vector2(375, 150),
+                MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
+            };
 
-        GoatImagePath = goatImagePath;
-        Plugin = plugin;
-    }
-
-    public void Dispose() { }
-
-    public override void Draw()
-    {
-        // Do not use .Text() or any other formatted function like TextWrapped(), or SetTooltip().
-        // These expect formatting parameter if any part of the text contains a "%", which we can't
-        // provide through our bindings, leading to a Crash to Desktop.
-        // Replacements can be found in the ImGuiHelpers Class
-        ImGui.TextUnformatted($"The random config bool is {Plugin.Configuration.SomePropertyToBeSavedAndWithADefault}");
-
-        if (ImGui.Button("Show Settings"))
-        {
-            Plugin.ToggleConfigUI();
+            this.plugin = plugin;
         }
 
-        ImGui.Spacing();
+        public void Dispose() { }
 
-        // Normally a BeginChild() would have to be followed by an unconditional EndChild(),
-        // ImRaii takes care of this after the scope ends.
-        // This works for all ImGui functions that require specific handling, examples are BeginTable() or Indent().
-        using (var child = ImRaii.Child("SomeChildWithAScrollbar", Vector2.Zero, true))
+        public override void Draw()
         {
-            // Check if this child is drawing
-            if (child.Success)
+            if (plugin.Configuration.DJPath == "")
             {
-                ImGui.TextUnformatted("Have a goat:");
-                var goatImage = Plugin.TextureProvider.GetFromFile(GoatImagePath).GetWrapOrDefault();
-                if (goatImage != null)
+                ImGui.TextColored(new Vector4(1, 0, 0, 1), "Save your DJ Path in the settings.");
+                if (ImGui.Button("Show Settings"))
                 {
-                    using (ImRaii.PushIndent(55f))
-                    {
-                        ImGui.Image(goatImage.ImGuiHandle, new Vector2(goatImage.Width, goatImage.Height));
-                    }
+                    plugin.ToggleConfigUI();
                 }
-                else
+                return;
+            }
+
+            ImGui.Spacing();
+
+            // Eingabefeld für den YouTube-Link
+            ImGui.InputText("YouTube Link##myyt", ref youtubeLink, 1024);
+            ImGui.InputText("Saving Name##name", ref saveName, 1024);
+            ImGui.InputText("Playlist##name", ref playlist, 1024);
+
+            // Button, der das asynchrone Herunterladen/Konvertieren startet
+            if (ImGui.Button("Download & Save to DJ"))
+            {
+                // Wenn bereits eine Aufgabe läuft, nicht doppelt starten
+                if (currentDownloadTask == null || currentDownloadTask.IsCompleted)
                 {
-                    ImGui.TextUnformatted("Image not found.");
+                    // Fire-and-forget: Wir starten die Methode und speichern uns das Task-Objekt.
+                    // So blockiert die UI nicht.
+                    currentDownloadTask = DownloadConvertAsync();
                 }
+            }
 
-                ImGuiHelpers.ScaledDummy(20.0f);
+            // Aktueller Status
+            if (!string.IsNullOrEmpty(proccessState))
+            {
+                ImGui.Text(proccessState);
+            }
+        }
 
-                // Example for other services that Dalamud provides.
-                // ClientState provides a wrapper filled with information about the local player object and client.
-
-                var localPlayer = Plugin.ClientState.LocalPlayer;
-                if (localPlayer == null)
+        /// <summary>
+        /// Asynchrone Methode, um MP3 herunterzuladen, zu OGG zu konvertieren
+        /// und danach SCD zu erzeugen.
+        /// </summary>
+        private async Task DownloadConvertAsync()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(youtubeLink))
                 {
-                    ImGui.TextUnformatted("Our local player is currently not loaded.");
+                    proccessState = "No YouTube link provided.";
+                    Plugin.Log.Warning("No YouTube link provided.");
                     return;
                 }
 
-                if (!localPlayer.ClassJob.IsValid)
+                proccessState = "Preparing download...";
+                await Task.Yield(); // Kleiner "Trick", um sicherzustellen, dass wir die UI nicht blocken
+
+                // 1) Zielpfad definieren
+                //    Z.B. "C:\FFXIVSoundMods\mySong.ogg"
+
+                ResourceChecker.CheckDJ(plugin);
+                if (plugin.Configuration.DJPath == "")
                 {
-                    ImGui.TextUnformatted("Our current job is currently not valid.");
+                    proccessState = "Error with Path. Renew the given Path in the Settings.";
                     return;
                 }
 
-                // ExtractText() should be the preferred method to read Lumina SeStrings,
-                // as ToString does not provide the actual text values, instead gives an encoded macro string.
-                ImGui.TextUnformatted($"Our current job is ({localPlayer.ClassJob.RowId}) \"{localPlayer.ClassJob.Value.Abbreviation.ExtractText()}\"");
+                var rand = new Random().Next(9999);
+                var rand2 = new Random().Next(9999);
 
-                // Example for quarrying Lumina directly, getting the name of our current area.
-                var territoryId = Plugin.ClientState.TerritoryType;
-                if (Plugin.DataManager.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territoryRow))
+                string finalOgg = Path.Combine(Path.GetTempPath(), $"{rand}_{saveName}_{rand2}.ogg");
+                string tempMp3 = Path.Combine(Path.GetTempPath(), $"{rand}_{saveName}_{rand2}.mp3");
+                string scdPath = Path.Combine(plugin.Configuration.DJPath, "custom", $"{rand}_{saveName}_{rand2}.scd");
+
+                string samplePath = Path.Combine(Configuration.Resources, "test.scd");
+                string sampleOggPath = Path.Combine(Configuration.Resources, "7957_kids bitte funnktionier_4072.ogg");
+
+                // 2) Download in einem Threadpool-Thread (CPU-/IO-lastig)
+                proccessState = "Downloading audio (yt-dlp)...";
+                await Task.Run(async() =>
                 {
-                    ImGui.TextUnformatted($"We are currently in ({territoryId}) \"{territoryRow.PlaceName.Value.Name.ExtractText()}\"");
-                }
-                else
+                    Plugin.Log.Information($"Downloading {youtubeLink} -> {tempMp3}");
+                    await YoutubeDownloader.DownloadAudioAsync(youtubeLink, tempMp3, useMp3: true);
+                });
+
+                // 3) Konvertieren (ffmpeg) -> OGG (44100 Hz)
+                proccessState = "Converting MP3->OGG (ffmpeg)...";
+                await Task.Run(() =>
                 {
-                    ImGui.TextUnformatted("Invalid territory.");
-                }
+                    Plugin.Log.Information($"Converting MP3->OGG {tempMp3} -> {finalOgg}");
+                    AudioConverter.ConvertToOgg44100(tempMp3, finalOgg);
+                });
+
+                // 4) ScdConverter (ebenfalls auslagern)
+                proccessState = "Building SCD file...";
+                await Task.Run(() =>
+                {
+                    Builder.BuildNewScd(samplePath, sampleOggPath, finalOgg, scdPath);
+                });
+
+                // Abschließende Meldung
+                proccessState = $"Done.";
+                DJImporter.Import(plugin, saveName, $"{rand}_{saveName}_{rand2}.scd", playlist);
+                plugin.RefreshMods();
+                
+            }
+            catch (Exception ex)
+            {
+                proccessState = $"Error: {ex.Message}";
+                Plugin.Log.Error($"Error in DownloadConvertAsync: {ex.Message}");
             }
         }
     }

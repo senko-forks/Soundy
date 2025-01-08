@@ -1,59 +1,87 @@
-﻿using System;
-using System.Numerics;
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
+using System;
+using System.IO;
+using System.Numerics;
 
-namespace SamplePlugin.Windows;
-
-public class ConfigWindow : Window, IDisposable
+namespace SamplePlugin.Windows
 {
-    private Configuration Configuration;
-
-    // We give this window a constant ID using ###
-    // This allows for labels being dynamic, like "{FPS Counter}fps###XYZ counter window",
-    // and the window ID will always be "###XYZ counter window" for ImGui
-    public ConfigWindow(Plugin plugin) : base("A Wonderful Configuration Window###With a constant ID")
+    public class ConfigWindow : Window, IDisposable
     {
-        Flags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
-                ImGuiWindowFlags.NoScrollWithMouse;
+        private readonly Plugin plugin;
 
-        Size = new Vector2(232, 90);
-        SizeCondition = ImGuiCond.Always;
-
-        Configuration = plugin.Configuration;
-    }
-
-    public void Dispose() { }
-
-    public override void PreDraw()
-    {
-        // Flags must be added or removed before Draw() is being called, or they won't apply
-        if (Configuration.IsConfigWindowMovable)
+        public ConfigWindow(Plugin plugin)
+            : base("YT Import Config",
+                   ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
         {
-            Flags &= ~ImGuiWindowFlags.NoMove;
-        }
-        else
-        {
-            Flags |= ImGuiWindowFlags.NoMove;
-        }
-    }
+            // Festlegen von Minimal- und Maximalgröße
+            this.SizeConstraints = new WindowSizeConstraints
+            {
+                MinimumSize = new Vector2(300, 200),
+                MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
+            };
 
-    public override void Draw()
-    {
-        // can't ref a property, so use a local copy
-        var configValue = Configuration.SomePropertyToBeSavedAndWithADefault;
-        if (ImGui.Checkbox("Random Config Bool", ref configValue))
-        {
-            Configuration.SomePropertyToBeSavedAndWithADefault = configValue;
-            // can save immediately on change, if you don't want to provide a "Save and Close" button
-            Configuration.Save();
+            this.plugin = plugin;
         }
 
-        var movable = Configuration.IsConfigWindowMovable;
-        if (ImGui.Checkbox("Movable Config Window", ref movable))
+        public void Dispose()
         {
-            Configuration.IsConfigWindowMovable = movable;
-            Configuration.Save();
+        }
+
+        public override void Draw()
+        {
+            // Kurze Anleitung
+            ImGui.Text("To set your DJ path:");
+            ImGui.BulletText("Open Penumbra");
+            ImGui.BulletText("Go to [Yue's + Lu's] Dj -> Edit Mod");
+            ImGui.BulletText("Click 'Open Mod Directory'");
+            ImGui.BulletText("Copy the complete directory path");
+            ImGui.BulletText("Paste it here:");
+
+            ImGui.Spacing();
+            ImGui.Separator();
+            ImGui.Spacing();
+
+            // Aktuellen Pfad aus der Config holen
+            var pathInput = plugin.Configuration.DJPath ?? string.Empty;
+
+            // Eingabefeld
+            if (ImGui.InputText("Directory Path##cfg", ref pathInput, 1024))
+            {
+                // Versuchen, den Pfad zu normalisieren/validieren
+                try
+                {
+                    // Ein leerer String wirft ggf. eine Ausnahme, daher abfangen
+                    if (!string.IsNullOrWhiteSpace(pathInput))
+                    {
+                        // Normalisiert z. B. "..", ".", etc.
+                        var fullPath = Path.GetFullPath(pathInput);
+                        plugin.Configuration.DJPath = fullPath;
+                    }
+                    else
+                    {
+                        // Wenn der User alles löscht, kann man entscheiden:
+                        plugin.Configuration.DJPath = string.Empty;
+                    }
+                }
+                catch (Exception e)
+                {
+                    // Optional: Fehlermeldung loggen oder ignorieren
+                    Plugin.Log.Error($"Invalid path: {e.Message}");
+                    // Pfad bleibt dann unverändert
+                }
+
+                // Speichern der Config
+                plugin.Configuration.Save();
+            }
+
+            ImGui.Spacing();
+
+            // Button zum Schließen
+            if (ImGui.Button("Close Config"))
+            {
+                this.IsOpen = false;
+            }
         }
     }
 }

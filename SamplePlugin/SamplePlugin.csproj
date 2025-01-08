@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Dalamud.NET.SDK/11.0.0">
   <PropertyGroup>
-    <Version>0.0.0.1</Version>
+    <Version>1.0.0.0</Version>
     <Description>A sample plugin.</Description>
     <PackageProjectUrl>https://github.com/goatcorp/SamplePlugin</PackageProjectUrl>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
@@ -13,5 +13,28 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </Content>
+  </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="Resources\ffmpeg.exe">
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+        <EmbeddedResource Include="Resources\yt-dlp.exe">
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="NVorbis" Version="0.10.5" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="ECommons">
+        <HintPath>..\..\peepingtim\ECommons\ECommons\bin\Debug\ECommons.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+    <PackageReference Update="DotNet.ReproducibleBuilds" Version="1.2.25" />
   </ItemGroup>
 </Project>
