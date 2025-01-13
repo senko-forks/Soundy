@@ -3,10 +3,16 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Web; // Für URL-Parsing, benötigt .NET Framework oder entsprechendes Paket
 
-namespace SamplePlugin
+namespace YTImport
 {
     public static class YoutubeDownloader
     {
+
+        public static async Task UpdateYT()
+        {
+            var exePath = ToolLoader.YtdlpPath;
+            await RunProcessAsync(exePath, "-U");
+        }
         /// <summary>
         /// Lädt via yt-dlp nur den Audiostream von YouTube,
         /// konvertiert ihn sofort in MP3 oder Vorbis (OGG).
@@ -31,6 +37,7 @@ namespace SamplePlugin
             string args = $"--extract-audio --audio-format {format} --audio-quality 0 --no-playlist -o \"{outputFile}\" \"{youtubeUrl}\"";
 
             Plugin.Log.Information($"[yt-dlp] Starte Prozess mit Argumenten: {args}");
+
             await RunProcessAsync(exePath, args);
         }
 

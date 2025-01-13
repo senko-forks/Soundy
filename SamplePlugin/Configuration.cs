@@ -1,28 +1,32 @@
 using Dalamud.Configuration;
-using Dalamud.Plugin;
 using System;
 using System.IO;
 
-namespace SamplePlugin
+namespace YTImport
 {
     [Serializable]
     public class Configuration : IPluginConfiguration
     {
         public int Version { get; set; } = 1;
 
-        // Beispiel: Flag aus dem Sample
-        public bool SomePropertyToBeSavedAndWithADefault { get; set; } = true;
-
-        // Hier hinterlegt der User den Pfad, wohin wir speichern wollen.
-        public static string BasePath = Plugin.PluginInterface.GetPluginConfigDirectory();
-        public static string Tools = Path.Combine(BasePath, "tools");
-        public static string Resources = Path.Combine(BasePath, "resources");
-
+        // User-defined paths
         public string DJPath { get; set; } = "";
+
+        // Tool download status
+        public bool AreToolsDownloaded { get; set; } = false;
+
+        public int Choice { get; set; } = 0;
+
+        // Download URL for the tools ZIP
+        public string ToolsZipUrl { get; set; } = "https://github.com/lnjanos/yueImport/releases/download/release/tools.zip";
+
+        // Base directories
+        public static string BasePath { get; } = Plugin.PluginInterface.GetPluginConfigDirectory();
+        public static string ToolsPath { get; } = Path.Combine(BasePath, "tools");
+        public static string Resources { get; } = Path.Combine(BasePath, "resources");
 
         public void Save()
         {
-            // Standard: Speichert unsere Config in die Plugin-Konfiguration
             Plugin.PluginInterface.SavePluginConfig(this);
         }
     }

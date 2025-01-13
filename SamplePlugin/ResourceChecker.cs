@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using Dalamud; // Falls du PluginInterface brauchst
-using SamplePlugin;
+using YTImport;
 public static class ResourceChecker
 {
     public static void CheckDJ(Plugin plugin)
@@ -32,17 +32,14 @@ public static class ResourceChecker
 
         // 2) Lokale Pfade für "resources" und "tools"
         var localResourcesDir = Path.Combine(assDir, "resources");
-        var localToolsDir = Path.Combine(assDir, "tools");
 
         // 3) Aus der Plugin-Konfiguration lesen wir z.B. so:
         //    (Annahme: du hast z. B. Plugin.Configuration.Resources und 
         //     Plugin.Configuration.Tools als Pfadangaben in deiner Config)
         var configResourcesDir = Path.GetFullPath(Configuration.Resources);
-        var configToolsDir = Path.GetFullPath(Configuration.Tools);
 
         // 4) Sicherstellen, dass die Verzeichnisse zusammenpassen:
         EnsureDirectoryMatches(localResourcesDir, configResourcesDir);
-        EnsureDirectoryMatches(localToolsDir, configToolsDir);
     }
 
     /// <summary>

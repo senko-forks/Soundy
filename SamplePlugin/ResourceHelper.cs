@@ -3,7 +3,7 @@ using System;
 using System.IO;
 using System.Reflection;
 
-namespace SamplePlugin
+namespace YTImport
 {
     public static class ResourceHelper
     {
@@ -12,7 +12,7 @@ namespace SamplePlugin
         /// in den Temp-Ordner (oder einen gewünschten Pfad) und gibt diesen Pfad zurück.
         /// </summary>
         /// <param name="resourceName">
-        /// Vollständiger Name, z. B. "SamplePlugin.Resources.ffmpeg.exe"
+        /// Vollständiger Name, z. B. "YTImport.Resources.ffmpeg.exe"
         /// (siehe Assembly.GetManifestResourceNames()).
         /// </param>
         /// <param name="outputFileName">Wie die Datei heißen soll (z. B. "ffmpeg.exe").</param>

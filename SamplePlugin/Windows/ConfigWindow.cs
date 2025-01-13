@@ -4,7 +4,7 @@ using System;
 using System.IO;
 using System.Numerics;
 
-namespace SamplePlugin.Windows
+namespace YTImport.Windows
 {
     public class ConfigWindow : Window, IDisposable
     {

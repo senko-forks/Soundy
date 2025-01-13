@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics;
 
-namespace SamplePlugin
+namespace YTImport
 {
     public static class AudioConverter
     {

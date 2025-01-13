@@ -4,20 +4,20 @@ using System.Linq;
 using System.Text.Json;
 using System.Collections.Generic;
 
-namespace SamplePlugin
+namespace YTImport
 {
     public static class DJImporter
     {
         /// <summary>
         /// Import-Methode:
-        /// 1) Sucht alle JSON-Dateien im Format "group_*_*.json" im DJ-Verzeichnis.
-        /// 2) Wenn keine "custom"-Datei gefunden wird, erstellt sie eine neue "group_{next}_custom.json".
-        ///    Dabei wird {next} = Anzahl vorhandener group_*_*.json Dateien + 1, startend bei 1.
-        /// 3) Lädt die Ziel-JSON-Datei, fügt einen neuen Eintrag hinzu und speichert sie.
+        /// 1) Searches all JSON files in the format "group_*_*.json" in the DJ directory.
+        /// 2) If no "custom" file is found, creates a new "group_{next}_custom.json".
+        ///    Where {next} = Number of existing group_*_*.json files + 1, starting at 1.
+        /// 3) Loads the target JSON file, adds a new entry, and saves it.
         /// </summary>
-        /// <param name="plugin">Das Plugin-Objekt (für Konfiguration und Logging)</param>
-        /// <param name="name">Name des neuen Options-Eintrags</param>
-        /// <param name="filename">Dateiname, der unter "custom\..." gelinkt wird</param>
+        /// <param name="plugin">The Plugin object (for configuration and logging)</param>
+        /// <param name="name">Name of the new options entry</param>
+        /// <param name="filename">Filename to be linked under "custom\..."</param>
         public static void Import(Plugin plugin, string name, string filename, string playlistName)
         {
             var dir = plugin.Configuration.DJPath;
@@ -27,21 +27,21 @@ namespace SamplePlugin
                 return;
             }
 
-            // 1) Suche alle Dateien vom Muster "group_*_*.json"
+            // 1) Search all files matching "group_*_*.json"
             var allGroupFiles = Directory.GetFiles(dir, "group_*_*.json", SearchOption.TopDirectoryOnly);
 
-            // 2) Prüfe, ob schon eine Datei mit "custom" im Namen existiert
+            // 2) Check if a "custom" file exists
             var customFiles = allGroupFiles.Where(f => f.Contains(playlistName, StringComparison.OrdinalIgnoreCase)).ToArray();
 
             string targetFile;
             if (customFiles.Length == 0)
             {
-                // Keine "custom"-Datei gefunden, erstelle eine neue
-                int nextNumber = allGroupFiles.Length + 1; // Startet bei 1
-                var newFileName = $"group_{nextNumber:D2}_{playlistName}.json"; // z.B. group_01_custom.json
+                // No "custom" file found, create a new one
+                int nextNumber = allGroupFiles.Length + 1; // Starts at 1
+                var newFileName = $"group_{nextNumber:D2}_{playlistName}.json"; // e.g., group_01_custom.json
                 targetFile = Path.Combine(dir, newFileName);
 
-                // Erstelle eine neue JSON-Struktur (ANHANG1)
+                // Create a new JSON structure (ANHANG1)
                 var newData = CreateDefaultCustomJson(playlistName);
                 SaveDJJson(plugin, targetFile, newData);
 
@@ -49,12 +49,12 @@ namespace SamplePlugin
             }
             else
             {
-                // "custom"-Datei gefunden, benutze die erste gefundene
+                // "custom" file found, use the first one
                 targetFile = customFiles[0];
                 Plugin.Log.Information($"Using existing custom group file: {targetFile}");
             }
 
-            // 3) Lade die bestehende (oder neu erstellte) JSON
+            // 3) Load the existing (or newly created) JSON
             var djData = LoadDJJson(plugin, targetFile);
             if (djData == null)
             {
@@ -62,7 +62,7 @@ namespace SamplePlugin
                 return;
             }
 
-            // 4) Erzeuge einen neuen Options-Eintrag (ANHANG2)
+            // 4) Create a new options entry (ANHANG2)
             var newOption = new OptionItem
             {
                 Name = name,
@@ -75,19 +75,19 @@ namespace SamplePlugin
                 Manipulations = new List<object>()
             };
 
-            // 5) Füge den neuen Eintrag hinzu, ohne alte Einträge zu entfernen
+            // 5) Add the new entry without removing old entries
             djData.Options.Add(newOption);
 
-            // 6) Speichere die geänderte JSON zurück
+            // 6) Save the updated JSON back
             SaveDJJson(plugin, targetFile, djData);
 
             Plugin.Log.Information($"Added new custom option \"{name}\" to {targetFile}");
         }
 
         /// <summary>
-        /// Erstellt die Standardstruktur für eine neue "custom"-JSON-Datei (ANHANG1).
+        /// Creates the default structure for a new "custom" JSON file (ANHANG1).
         /// </summary>
-        /// <returns>Ein neues DJJson-Objekt mit einem "Omit"-Eintrag</returns>
+        /// <returns>A new DJJson object with an "Omit" entry</returns>
         private static DJJson CreateDefaultCustomJson(string playlistName)
         {
             return new DJJson
@@ -102,7 +102,7 @@ namespace SamplePlugin
                 DefaultSettings = 0,
                 Options = new List<OptionItem>
                 {
-                    // Behalte "Omit" als ersten Eintrag
+                    // Keep "Omit" as the first entry
                     new OptionItem
                     {
                         Name = "Omit",
@@ -116,12 +116,12 @@ namespace SamplePlugin
         }
 
         /// <summary>
-        /// Lädt eine JSON-Datei in ein DJJson-Objekt.
+        /// Loads a JSON file into a DJJson object.
         /// </summary>
-        /// <param name="plugin">Das Plugin-Objekt (für Logging)</param>
-        /// <param name="path">Der Pfad zur JSON-Datei</param>
-        /// <returns>Das geladene DJJson-Objekt oder null bei Fehlern</returns>
-        private static DJJson? LoadDJJson(Plugin plugin, string path)
+        /// <param name="plugin">The Plugin object (for logging)</param>
+        /// <param name="path">The path to the JSON file</param>
+        /// <returns>The loaded DJJson object or null on failure</returns>
+        public static DJJson? LoadDJJson(Plugin plugin, string path)
         {
             try
             {
@@ -137,12 +137,12 @@ namespace SamplePlugin
         }
 
         /// <summary>
-        /// Speichert das DJJson-Objekt in eine JSON-Datei.
+        /// Saves the DJJson object to a JSON file.
         /// </summary>
-        /// <param name="plugin">Das Plugin-Objekt (für Logging)</param>
-        /// <param name="path">Der Pfad zur JSON-Datei</param>
-        /// <param name="data">Das DJJson-Objekt, das gespeichert werden soll</param>
-        private static void SaveDJJson(Plugin plugin, string path, DJJson data)
+        /// <param name="plugin">The Plugin object (for logging)</param>
+        /// <param name="path">The path to the JSON file</param>
+        /// <param name="data">The DJJson object to save</param>
+        public static void SaveDJJson(Plugin plugin, string path, DJJson data)
         {
             try
             {
@@ -156,23 +156,23 @@ namespace SamplePlugin
         }
 
         /// <summary>
-        /// Definiert die JSON-Serializer-Optionen.
+        /// Defines JSON serializer options.
         /// </summary>
-        /// <param name="writeIndent">Gibt an, ob das JSON formatiert werden soll</param>
-        /// <returns>Ein JsonSerializerOptions-Objekt</returns>
+        /// <param name="writeIndent">Whether to format the JSON with indentation</param>
+        /// <returns>A JsonSerializerOptions object</returns>
         private static JsonSerializerOptions JsonOptions(bool writeIndent = false)
         {
             return new JsonSerializerOptions
             {
                 WriteIndented = writeIndent,
-                PropertyNamingPolicy = null, // Verwende die Property-Namen direkt (PascalCase)
+                PropertyNamingPolicy = null, // Use property names directly (PascalCase)
                 // Optional: AllowTrailingCommas, ReadCommentHandling etc.
             };
         }
     }
 
     /// <summary>
-    /// Entspricht der JSON-Struktur der "custom"-Dateien.
+    /// Represents the JSON structure of "custom" files.
     /// </summary>
     public class DJJson
     {
@@ -189,7 +189,7 @@ namespace SamplePlugin
     }
 
     /// <summary>
-    /// Entspricht den Einträgen im "Options"-Array der JSON-Datei.
+    /// Represents the entries within the "Options" array of the JSON file.
     /// </summary>
     public class OptionItem
     {
