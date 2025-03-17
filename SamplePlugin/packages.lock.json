@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net8.0-windows7.0": {
+      "DalamudPackager": {
+        "type": "Direct",
+        "requested": "[11.0.0, )",
+        "resolved": "11.0.0",
+        "contentHash": "bjT7XUlhIJSmsE/O76b7weUX+evvGQctbQB8aKXt94o+oPWxHpCepxAGMs7Thow3AzCyqWs7cOpp9/2wcgRRQA=="
+      },
+      "DotNet.ReproducibleBuilds": {
+        "type": "Direct",
+        "requested": "[1.2.25, )",
+        "resolved": "1.2.25",
+        "contentHash": "xCXiw7BCxHJ8pF6wPepRUddlh2dlQlbr81gXA72hdk4FLHkKXas7EH/n+fk5UCA/YfMqG1Z6XaPiUjDbUNBUzg=="
+      },
+      "NVorbis": {
+        "type": "Direct",
+        "requested": "[0.10.5, )",
+        "resolved": "0.10.5",
+        "contentHash": "o+IptCG4Avze39HrGeztC+xIp6fOOwGVAwkoa1J++4Ji1WmZ+KIKlFl5wsgxsXqBkmdpfs/vFSUproiLKYa2bw==",
+        "dependencies": {
+          "System.Memory": "4.5.3",
+          "System.ValueTuple": "4.5.0"
+        }
+      },
+      "System.Memory": {
+        "type": "Transitive",
+        "resolved": "4.5.3",
+        "contentHash": "3oDzvc/zzetpTKWMShs1AADwZjQ/36HnsufHRPcOjyRAAMLDlu2iD33MBI2opxnezcVUtXyqDXXjoFMOU9c7SA=="
+      },
+      "System.ValueTuple": {
+        "type": "Transitive",
+        "resolved": "4.5.0",
+        "contentHash": "okurQJO6NRE/apDIP23ajJ0hpiNmJ+f0BwOlB/cSqTLQlw5upkf+5+96+iG2Jw40G1fCVCyPz/FhIABUjMR+RQ=="
+      }
+    }
+  }
+}

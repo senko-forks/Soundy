@@ -1,0 +1,24 @@
+{
+    "Author": "kcuY",
+    "Name": "YT Import for Yue's Dj",
+    "Punchline": "Quick importer for Yue's Dj.",
+    "Description": "Quick importer for Yue's Dj.",
+    "Tags": [
+        "YT Import for Yue's Dj"
+    ],
+    "InternalName": "YTImport",
+    "AssemblyVersion": "1.2.1.0",
+    "TestingAssemblyVersion": "1.0.0.0",
+    "RepoUrl": "https://github.com/lnjanos/yueImport",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 11,
+    "TestingDalamudApiLevel": 11,
+    "IsHide": "False",
+    "IsTestingExclusive": "False",
+    "DownloadCount": 45,
+    "LastUpdate": 1733780713,
+    "DownloadLinkInstall": "https://github.com/lnjanos/yueImport/releases/download/release/1.2.1.0.zip",
+    "DownloadLinkUpdate": "https://github.com/lnjanos/yueImport/releases/download/release/1.2.1.0.zip",
+    "DownloadLinkTesting": "https://github.com/lnjanos/yueImport/releases/download/release/1.0.0.1.zip",
+    "IconUrl": "https://raw.githubusercontent.com/lnjanos/yueImport/refs/heads/master/beepboop.png"
+}
