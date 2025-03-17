@@ -35,6 +35,9 @@ namespace YTImport.Windows
                   ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoResize)
         {
             this.plugin = plugin;
+
+            TitleBarButtons.Add(Support.NavBarBtn);
+
             this.SizeConstraints = new WindowSizeConstraints
             {
                 MinimumSize = new Vector2(400, 200),

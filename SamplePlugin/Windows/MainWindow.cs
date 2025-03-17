@@ -40,6 +40,9 @@ namespace YTImport.Windows
                 MinimumSize = new Vector2(400, 225),
                 MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
             };
+
+            TitleBarButtons.Add(Support.NavBarBtn);
+
             this.Size = new Vector2(400, 225);
             this.plugin = plugin;
         }

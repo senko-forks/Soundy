@@ -21,6 +21,8 @@ namespace YTImport.Windows
                 MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
             };
 
+            TitleBarButtons.Add(Support.NavBarBtn);
+
             this.plugin = plugin;
         }
 
@@ -30,6 +32,8 @@ namespace YTImport.Windows
 
         public override void Draw()
         {
+            Support.DrawRight();
+
             // Kurze Anleitung
             ImGui.Text("To set your DJ path:");
             ImGui.BulletText("Open Penumbra");
