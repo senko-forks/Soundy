@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Collections.Generic;
 
-namespace YTImport
+namespace Soundy
 {
     public static class DJImporter
     {
@@ -20,10 +20,10 @@ namespace YTImport
         /// <param name="filename">Filename to be linked under "custom\..."</param>
         public static void Import(Plugin plugin, string name, string filename, string playlistName)
         {
-            var dir = plugin.Configuration.DJPath;
+            var dir = plugin.Configuration.PenumbraPath;
             if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
             {
-                Plugin.Log.Error($"DJ Path invalid: {dir}");
+                Plugin.Log.Error($"Soundy invalid: {dir}");
                 return;
             }
 

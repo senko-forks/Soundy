@@ -3,7 +3,7 @@ using System;
 using System.IO;
 using System.Reflection;
 
-namespace YTImport
+namespace Soundy
 {
     public static class ResourceHelper
     {
@@ -12,7 +12,7 @@ namespace YTImport
         /// in den Temp-Ordner (oder einen gewünschten Pfad) und gibt diesen Pfad zurück.
         /// </summary>
         /// <param name="resourceName">
-        /// Vollständiger Name, z. B. "YTImport.Resources.ffmpeg.exe"
+        /// Vollständiger Name, z. B. "Soundy.Resources.ffmpeg.exe"
         /// (siehe Assembly.GetManifestResourceNames()).
         /// </param>
         /// <param name="outputFileName">Wie die Datei heißen soll (z. B. "ffmpeg.exe").</param>

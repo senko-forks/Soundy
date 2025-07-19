@@ -5,7 +5,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Dalamud.Logging;
 
-namespace YTImport
+namespace Soundy
 {
     public static class ToolLoader
     {
@@ -154,7 +154,7 @@ namespace YTImport
 
             FfmpegPath = Path.Combine(toolsDir, "ffmpeg.exe");
             YtdlpPath = Path.Combine(toolsDir, "yt-dlp.exe");
-
+            
             if (!File.Exists(FfmpegPath))
             {
                 throw new FileNotFoundException($"ffmpeg.exe not found in {toolsDir}");

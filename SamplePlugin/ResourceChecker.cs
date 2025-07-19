@@ -1,27 +1,20 @@
 using System;
 using System.IO;
 using Dalamud; // Falls du PluginInterface brauchst
-using YTImport;
+using Soundy;
 public static class ResourceChecker
 {
     public static void CheckDJ(Plugin plugin)
     {
-        var djPath = plugin.Configuration.DJPath;
+        var djPath = plugin.Configuration.PenumbraPath;
 
         // 1) Prüfen, ob djPath angegeben und vorhanden ist.
         //    Falls nicht, pfad zurücksetzen und beenden.
         if (string.IsNullOrWhiteSpace(djPath) || !Directory.Exists(djPath))
         {
-            plugin.Configuration.DJPath = "";
+            plugin.Configuration.PenumbraPath = "";
             plugin.Configuration.Save();
             return;
-        }
-
-        // 2) Wenn djPath existiert, prüfen wir, ob es einen "custom"-Unterordner gibt.
-        var customFolder = Path.Combine(djPath, "custom");
-        if (!Directory.Exists(customFolder))
-        {
-            Directory.CreateDirectory(customFolder);
         }
     }
 
@@ -94,10 +87,12 @@ public static class ResourceChecker
         // RemoveExtraFiles(targetDir, sourceDir);
     }
 
+
     /// <summary>
     /// Optionales Hilfsbeispiel: Entfernt alle Dateien im targetDir, die 
     /// im sourceDir nicht existieren. (Nur wenn du so ein „Spiegeln“ wünschst.)
     /// </summary>
+    /// 
     private static void RemoveExtraFiles(string targetDir, string sourceDir)
     {
         var targetFiles = Directory.GetFiles(targetDir, "*", SearchOption.TopDirectoryOnly);

@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Web; // Für URL-Parsing, benötigt .NET Framework oder entsprechendes Paket
 
-namespace YTImport
+namespace Soundy
 {
     public static class YoutubeDownloader
     {
@@ -32,7 +32,7 @@ namespace YTImport
             // --audio-quality 0 -> beste Qualität
             // --no-playlist -> ignoriert Playlists und lädt nur das einzelne Video
             // -o "<Pfad>"
-            string format = useMp3 ? "mp3" : "vorbis";
+            string format = useMp3 ? "wav" : "vorbis";
 
             string args = $"--extract-audio --audio-format {format} --audio-quality 0 --no-playlist -o \"{outputFile}\" \"{youtubeUrl}\"";
 

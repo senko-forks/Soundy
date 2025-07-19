@@ -4,12 +4,12 @@ using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using System.IO;
-using YTImport.Windows;
+using Soundy.Windows;
 using ECommons;
 using ECommons.Automation;
 using ECommons.DalamudServices;
 
-namespace YTImport
+namespace Soundy
 {
     public sealed class Plugin : IDalamudPlugin
     {
@@ -21,17 +21,16 @@ namespace YTImport
         [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
         [PluginService] internal static IPluginLog Log { get; private set; } = null!;
 
-        public string Name => "YTImport";
+        public string Name => "Soundy";
 
-        private const string CommandName = "/ytimport";
+        private const string CommandName = "/soundy";
 
         public Configuration Configuration { get; init; }
 
-        private readonly WindowSystem windowSystem = new("YT Import for Yue's DJ");
+        private readonly WindowSystem windowSystem = new("Soundy for Yue's DJ");
 
         private ConfigWindow configWindow;
         private MainWindow mainWindow;
-        private DeleteWindow deleteWindow; // Add DeleteWindow
 
         public Plugin()
         {
@@ -48,16 +47,14 @@ namespace YTImport
             // 3) Initialize GUI windows
             configWindow = new ConfigWindow(this);
             mainWindow = new MainWindow(this);
-            deleteWindow = new DeleteWindow(this); // Initialize DeleteWindow
 
             windowSystem.AddWindow(configWindow);
             windowSystem.AddWindow(mainWindow);
-            windowSystem.AddWindow(deleteWindow); // Add DeleteWindow to WindowSystem
 
             // 4) Register Slash Command
             CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
             {
-                HelpMessage = "Open the YT Import for Yue's DJ main window."
+                HelpMessage = "Open Soundy's main window."
             });
 
             // 5) Register UI callbacks
@@ -65,7 +62,8 @@ namespace YTImport
             PluginInterface.UiBuilder.OpenConfigUi += ToggleConfigUI;
             PluginInterface.UiBuilder.OpenMainUi += ToggleMainUI;
 
-            Log.Information("=== YT Import for Yue's DJ loaded ===");
+            Log.Information("=== Soundy loaded ===");
+
         }
 
         public void Dispose()
@@ -76,7 +74,6 @@ namespace YTImport
             // Dispose windows
             configWindow?.Dispose();
             mainWindow?.Dispose();
-            deleteWindow?.Dispose(); // Dispose DeleteWindow
 
             // Remove command handler
             CommandManager.RemoveHandler(CommandName);
@@ -105,10 +102,5 @@ namespace YTImport
 
         public void ToggleMainUI() => mainWindow.Toggle();
 
-        // Method to toggle DeleteWindow (optional: you can add a separate command or button to open it)
-        public void ToggleDeleteUI()
-        {
-            deleteWindow.Toggle();
-        }
     }
 }

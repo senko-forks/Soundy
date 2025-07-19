@@ -6,6 +6,7 @@
     <PackageProjectUrl>https://github.com/goatcorp/SamplePlugin</PackageProjectUrl>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
     <IsPackable>false</IsPackable>
+    <TargetFramework>net9.0-windows7.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,20 +14,25 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </Content>
-    <Content Include="YTImport.json" />
+    <Content Include="Soundy.json" />
   </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="NAudio" Version="2.2.1" />
       <PackageReference Include="NVorbis" Version="0.10.5" />
     </ItemGroup>
 
     <ItemGroup>
       <Reference Include="ECommons">
-        <HintPath>..\..\peepingtim\ECommons\ECommons\bin\Debug\ECommons.dll</HintPath>
+        <HintPath>..\..\..\..\source\repos\lnjanos\peepingtim\ECommons\ECommons\bin\Debug\ECommons.dll</HintPath>
+      </Reference>
+      <Reference Include="VFXEditor">
+        <HintPath>..\..\Dalamud-VFXEditor-34a06b479863c0b3b83ad322c441565f31bfba46\VFXEditor\bin\Debug\VFXEditor.dll</HintPath>
       </Reference>
     </ItemGroup>
 
     <ItemGroup>
+    <PackageReference Update="DalamudPackager" Version="12.0.0" />
     <PackageReference Update="DotNet.ReproducibleBuilds" Version="1.2.25" />
   </ItemGroup>
 </Project>

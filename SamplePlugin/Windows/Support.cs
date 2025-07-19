@@ -14,7 +14,7 @@ using Dalamud.Interface;
 using static FFXIVClientStructs.FFXIV.Component.GUI.AtkTooltipManager.Delegates;
 using System.Drawing;
 
-namespace YTImport.Windows
+namespace Soundy.Windows
 {
     public static class Support
     {
@@ -23,6 +23,13 @@ namespace YTImport.Windows
             Click = (m) => { GenericHelpers.ShellStart("https://ko-fi.com/kkcuy"); },
             Icon = FontAwesomeIcon.Heart,
             ShowTooltip = () => ImGui.SetTooltip($"Support {Svc.PluginInterface.Manifest.Name}")
+        };
+
+        public static Window.TitleBarButton DiscordBtn = new Window.TitleBarButton
+        {
+            Click = (m) => { GenericHelpers.ShellStart("https://discord.gg/2CbzecNZav"); },
+            Icon = FontAwesomeIcon.HandsHelping,
+            ShowTooltip = () => ImGui.SetTooltip($"Join Discord")
         };
 
         public static Func<bool> IsOfficialPlugin = () => false;
