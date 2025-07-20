@@ -37,7 +37,7 @@ namespace Soundy
                 }
 
                 // 3) ffmpeg-Aufruf -> OGG (libvorbis), 44100 Hz, Volume, optional Limiter
-                main.ChangeState("Converting MP3 to OGG...");
+                main.ChangeState("Converting MP3 to OGG...", true);
                 Plugin.Log.Information($"Converting MP3 to OGG:");
                 ConvertWavToOggHighQuality(tempWav, outputOggFile, userVolume, applyLimiter, quality);
             }

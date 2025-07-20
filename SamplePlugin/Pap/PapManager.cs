@@ -74,8 +74,12 @@ namespace Soundy.Pap
             var rawList = new List<(string JsonFile, string OptionName, string GroupName, string PapPath)>();
 
             var jsonFiles = Directory.GetFiles(dirPath, "*.json", SearchOption.TopDirectoryOnly);
+            var count = 0;
+            var countMax = jsonFiles.Length;
             foreach (var file in jsonFiles)
             {
+                count++;
+                state = $"Scanning files... ({count}/{countMax})";
                 try
                 {
                     string json = File.ReadAllText(file);
@@ -133,9 +137,14 @@ namespace Soundy.Pap
                 .Where(g => File.Exists(Path.Combine(dirPath, g.PapPath)))
                 .ToList();
 
+            count = 0;
+            countMax = groups.Count;
+
             // Nun: Für jede gefundene PAP-Datei den Inhalt laden und darin nach SCD-Einträgen suchen.
             foreach (var group in groups)
             {
+                count++;
+                state = $"Scanning animations... ({count}/{countMax})";
                 // Falls der PAP-Pfad relativ ist, kombinieren wir ihn mit dem Mod-Verzeichnis:
                 string absolutePapPath = Path.Combine(dirPath, group.PapPath);
                 var random = new Random();

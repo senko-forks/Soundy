@@ -69,6 +69,19 @@ namespace Soundy.Windows
 
         private bool showPapHelp = false;
 
+        // Step-based progress for import process
+        private readonly string[] importSteps = new[]
+        {
+            "Preparing download...",
+            "Updating Tools...",
+            "Downloading audio...",
+            "Building SCD file...",
+            "Injecting sound...",
+            "Updating JSON...",
+            "Done."
+        };
+        private int currentStep = -1;
+
         public MainWindow(Plugin plugin)
             : base("Soundy", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
         {
@@ -227,14 +240,12 @@ namespace Soundy.Windows
 
                 if (papScanTask == null)
                 {
-                    processState = "Scanning animations...";
                     papScanTask = PapManager.ScanForPapDetailsGroupedAsync(dirPath, msg => processState = msg);
                 }
 
                 if (!papScanTask.IsCompleted)
                 {
                     ImGui.Text(processState);
-                    ImGui.ProgressBar(0f, new Vector2(-1, 0));
                     return;
                 }
 
@@ -350,9 +361,9 @@ namespace Soundy.Windows
                 }
                 ImGui.EndTable();
             }
-        
 
-        ImGui.Spacing();
+
+            ImGui.Spacing();
 
             // 7) Download & Save-Button
             if (ImGui.Button("Download & Save"))
@@ -367,357 +378,411 @@ namespace Soundy.Windows
                     }
                     else
                     {
+                        currentStep = 0;
+                        processState = importSteps[currentStep];
                         currentDownloadTask = DownloadConvertAsync();
-}
+                    }
                 }
             }
 
             // Status / Meldungen
             ImGui.Spacing();
-ImGui.Separator();
-ImGui.Spacing();
-if (!string.IsNullOrEmpty(processState))
-{
-    ImGui.TextWrapped(processState);
-}
+            ImGui.Separator();
+            ImGui.Spacing();
+            DrawProcessStateUi();
 
-if (showPapHelp)
-{
-    ImGui.OpenPopup("PapHelpPopup");
-    showPapHelp = false;
-}
-bool open = true;
+            if (showPapHelp)
+            {
+                ImGui.OpenPopup("PapHelpPopup");
+                showPapHelp = false;
+            }
+            bool open = true;
             ImGui.SetNextWindowSize(new Vector2(400, 150));
-    if (ImGui.BeginPopupModal("PapHelpPopup", ref open, ImGuiWindowFlags.AlwaysAutoResize))
-{
-    ImGui.TextWrapped("In this step you choose which animation files (PAP) will have their sound replaced. Each row shows the group and option that references the animation, the PAP file path and its current SCD path. If multiple options share the same SCD path you can pick any of them.");
-    ImGui.Separator();
-    if (ImGui.Button("Close"))
-    {
-        ImGui.CloseCurrentPopup();
-    }
-    ImGui.EndPopup();
-}
+            if (ImGui.BeginPopupModal("PapHelpPopup", ref open, ImGuiWindowFlags.AlwaysAutoResize))
+            {
+                ImGui.TextWrapped("In this step you choose which animation files (PAP) will have their sound replaced. Each row shows the group and option that references the animation, the PAP file path and its current SCD path. If multiple options share the same SCD path you can pick any of them.");
+                ImGui.Separator();
+                if (ImGui.Button("Close"))
+                {
+                    ImGui.CloseCurrentPopup();
+                }
+                ImGui.EndPopup();
+            }
         }
 
         private void DrawDownloadToolsUi()
-{
-    if (isDownloadingTools)
-    {
-        ImGui.Text($"Downloading tools... {downloadProgress}");
-        float progressValue = 0.0f;
-        if (double.TryParse(downloadProgress.Replace("%", ""), out double p))
         {
-            progressValue = (float)(p / 100.0);
-        }
-        ImGui.ProgressBar(progressValue, new Vector2(200, 0), "Downloading tools...");
-    }
-    else
-    {
-        if (ImGui.Button("Download Tools"))
-        {
-            StartDownloadTools();
-        }
-    }
-}
-
-private void DrawModSelectionUi()
-{
-    ImGui.Text("Select a mod folder for import:");
-    ImGui.Separator();
-    ImGui.InputText("Filter", ref modFilter, 256);
-    ImGui.SameLine();
-    if (ImGui.Button("Refresh"))
-    {
-        LoadModFolders();
-    }
-    if (!modFolders.Any())
-    {
-        LoadModFolders();
-    }
-    if (ImGui.BeginChild("ModList", new Vector2(0, 200), true))
-    {
-        foreach (var mod in modFolders)
-        {
-            if (string.IsNullOrEmpty(modFilter) || mod.ToLower().Contains(modFilter.ToLower()))
+            if (isDownloadingTools)
             {
-                if (ImGui.Selectable(mod))
+                ImGui.Text($"Downloading tools... {downloadProgress}");
+                float progressValue = 0.0f;
+                if (double.TryParse(downloadProgress.Replace("%", ""), out double p))
                 {
-                    selectedMod = mod;
-                    papListLoaded = false; // Neu scannen, falls Mod gewechselt wird
-                    papScanTask = null;
-                    playlistsLoaded = false;
-                    playlistLoadTask = null;
+                    progressValue = (float)(p / 100.0);
                 }
-            }
-        }
-        ImGui.EndChild();
-    }
-}
-
-private void LoadModFolders()
-{
-    modFolders.Clear();
-    if (Directory.Exists(plugin.Configuration.PenumbraPath))
-    {
-        modFolders = Directory.GetDirectories(plugin.Configuration.PenumbraPath)
-            .Select(Path.GetFileName)
-            .ToList();
-    }
-}
-
-private void EnsurePlaylistsLoaded()
-{
-    if (playlistsLoaded || string.IsNullOrWhiteSpace(selectedMod)) return;
-
-    var dirPath = Path.Combine(plugin.Configuration.PenumbraPath, selectedMod);
-    if (!Directory.Exists(dirPath)) return;
-
-    if (playlistLoadTask == null)
-    {
-        playlistLoadTask = FileManager.GetPlaylistsAsync(dirPath);
-        processState = "Loading playlists...";
-    }
-
-    if (playlistLoadTask.IsCompleted)
-    {
-        availablePlaylists = playlistLoadTask.Result;
-        playlistsLoaded = true;
-        playlistLoadTask = null;
-        processState = string.Empty;
-        if (selectedPlaylistIndex >= availablePlaylists.Count)
-            selectedPlaylistIndex = 0;
-    }
-}
-
-private List<GroupedPapEntry> FilterPapEntries(List<GroupedPapEntry> source, string filter)
-{
-    if (string.IsNullOrEmpty(filter)) return source;
-    var low = filter.ToLowerInvariant();
-    return source.Where(e =>
-        e.PapPath.ToLowerInvariant().Contains(low) ||
-        e.References.Any(r =>
-            r.OptionName.ToLowerInvariant().Contains(low) ||
-            r.JsonFile.ToLowerInvariant().Contains(low)) ||
-        e.ScdDetails.Any(d =>
-            d.SCDPath.ToLowerInvariant().Contains(low) ||
-            d.AnimationName.ToLowerInvariant().Contains(low) ||
-            d.ActorName.ToLowerInvariant().Contains(low))
-    ).ToList();
-}
-
-public void ChangeState(string change)
-{
-    processState = change;
-}
-
-/// <summary>
-/// Asynchronous method to download audio, convert it, build a new SCD file,
-/// and for each selected PAP either update the existing SCD or inject a new one.
-/// Anschließend wird in den JSONs der mod-spezifische Song-Eintrag aktualisiert.
-/// </summary>
-private async Task DownloadConvertAsync()
-{
-    try
-    {
-        // 1) YouTube-Link validieren
-        if (string.IsNullOrWhiteSpace(youtubeLink))
-        {
-            processState = "No YouTube link provided.";
-            Plugin.Log.Warning(processState);
-            return;
-        }
-        if (userSelectedPapEntries == null || userSelectedPapEntries.Count == 0)
-        {
-            processState = "No PAP selected (userSelectedPapEntries is empty).";
-            return;
-        }
-        var dirPath = Path.Combine(plugin.Configuration.PenumbraPath, selectedMod);
-        FileManager.ScanForSoundyDir(dirPath);
-
-        var random = new Random();
-        int rand = random.Next(9999);
-        int rand2 = random.Next(9999);
-        processState = "Preparing download...";
-        await Task.Yield();
-        ResourceChecker.CheckDJ(plugin);
-
-        string tempMp3 = Path.Combine(Path.GetTempPath(), $"{rand}_{saveName}_{rand2}.wav");
-        string finalOgg = Path.Combine(Path.GetTempPath(), $"{rand}_{saveName}_{rand2}.ogg");
-
-        // Erzeugen eines neuen SCD-Files
-        string scdPath = Path.Combine(dirPath, "soundy", "songs",
-            $"{rand}_{saveName}_{rand2}.scd");
-
-        string samplePath;
-        if (plugin.Configuration.Choice == 0)
-        {
-            samplePath = Path.Combine(Configuration.Resources, "test.scd");
-        }
-        else
-        {
-            samplePath = Path.Combine(Configuration.Resources, $"test{plugin.Configuration.Choice}.scd");
-        }
-
-        processState = "Updating Tools...";
-        await Task.Run(async () =>
-        {
-            await YoutubeDownloader.UpdateYT();
-        });
-
-        // 2) Audio downloaden
-
-        Plugin.Log.Information($"Downloading {youtubeLink} -> {tempMp3}");
-        await Task.Run(async () =>
-        {
-            //await YoutubeDownloader.DownloadAudioAsync(youtubeLink, tempMp3, useMp3: true);
-            await YoutubeDownloadAndConvert.DownloadAndConvertAsync(
-                youtubeUrl: youtubeLink,
-                outputOggFile: finalOgg,
-                userVolume: 1.0f,   // -> ~2.0-Faktor => +6 dB
-                applyLimiter: true, // Verhindert hartes Clipping
-                quality: 5,         // Höchste Vorbis-Qualität
-                main: this
-            );
-        });
-
-        // 3) Audio konvertieren
-
-        //try
-        //{
-        //    await Task.Run(() =>
-        //    {
-        //        AudioConverter.ConvertToOgg44100(tempMp3, finalOgg, plugin.Configuration.Volume);
-        //    });
-        //}
-        //catch (Exception ex)
-        //{
-        //    processState = $"FFmpeg failed or timed out: {ex.Message}";
-        //    Plugin.Log.Error($"FFmpeg error: {ex.Message}");
-        //    return;
-        //}
-
-        // 4) Neues SCD-File erstellen
-        processState = "Building SCD file...";
-        Plugin.Log.Information($"Building SCD: {samplePath} + {finalOgg} -> {scdPath}");
-        try
-        {
-            ScdEdit.CreateScd(samplePath, scdPath, finalOgg);
-        }
-        catch (Exception ex)
-        {
-            processState = $"Error with creating scd: {ex}";
-            return;
-        }
-
-        // 5) Für jeden ausgewählten PAP-Eintrag:
-        //    - Falls bereits ein SCD in der PAP vorhanden ist, wird dieser mit dem neuen SCD überschrieben.
-        //    - Andernfalls wird der neue SCD in die PAP injiziert.
-        List<string> finalSCDPaths = new List<string>();
-        Dictionary<string, string> replacements = new();
-        var count = -1;
-        foreach (var papEntry in userSelectedPapEntries)
-        {
-            count++;
-            // Erstelle einen absoluten Pfad für die PAP-Datei
-            string currentPapPath = Path.Combine(dirPath, papEntry.PapPath);
-            if (!File.Exists(currentPapPath))
-            {
-                Plugin.Log.Warning($"PAP not found: {currentPapPath}");
-                continue;
-            }
-            string newPap = Path.Combine("soundy", "paps", $"injected_{Path.GetFileName(papEntry.PapPath)}");
-            string newPapPath = Path.Combine(dirPath, newPap);
-            if (papEntry.ScdDetails.Count < 1)
-            {
-                // Überschreibe den vorhandenen SCD in der PAP
-                // Hier rufen wir PapInjector.InjectSound auf – in diesem Beispiel nehmen wir an,
-                // dass das Überschreiben im selben File (currentPapPath) erfolgt.
-                string customRoute = $"soundy/sounds/{rand}_{rand2}.scd";
-
-                try
-                {
-                    await Svc.Framework.RunOnTick(() =>
-                    {
-                        PapInjector.InjectSound(customRoute, currentPapPath, newPapPath);
-                    });
-                }
-                catch (Exception ex)
-                {
-                    processState = $"Error in Injecting: {ex.Message}";
-                    return;
-                }
-
-                replacements.Add(papEntry.PapPath, newPap);
-
-                finalSCDPaths.Add(customRoute);
+                ImGui.ProgressBar(progressValue, new Vector2(200, 0), "Downloading tools...");
             }
             else
             {
-                // Es gibt keinen SCD in der PAP – injiziere den neuen Sound.
-                // Bestimme einen neuen Pfad für die aktualisierte PAP (z.B. in "soundy/paps")
-                //PapInjector.InjectSound(scdPath, currentPapPath, newPapPath);
-                foreach (var scd in papEntry.ScdDetails)
+                if (ImGui.Button("Download Tools"))
                 {
-                    finalSCDPaths.Add(scd.SCDPath);
+                    StartDownloadTools();
                 }
             }
-
         }
 
-        if (replacements.Count > 0)
-            FileManager.ReplacePaps(dirPath, replacements);
-
-        // 6) JSON aktualisieren: Es wird für jeden PAP-Eintrag der neue SCD-Pfad eingetragen.
-        processState = "Updating JSON...";
-        Plugin.Log.Information($"AddSong: {finalSCDPaths.Count} sscdPaths -> {scdPath}");
-        try
+        private void DrawModSelectionUi()
         {
-            FileManager.AddSong(dirPath, finalSCDPaths, scdPath, saveName, playlistName.Trim());
-        }
-        catch (Exception ex)
-        {
-            processState = $"Error in AddSong: {ex.Message}";
-            return;
-        }
-
-        processState = "Done.";
-        papListLoaded = false;
-        papScanTask = null;
-        playlistsLoaded = false;
-        playlistLoadTask = null;
-        plugin.RefreshMods();
-    }
-    catch (Exception ex)
-    {
-        processState = $"Error: {ex.Message}";
-        Plugin.Log.Error($"Error in DownloadConvertAsync: {ex.Message}");
-    }
-}
-
-private void StartDownloadTools()
-{
-    isDownloadingTools = true;
-    downloadProgress = "0%";
-    Task.Run(async () =>
-    {
-        try
-        {
-            await ToolLoader.InitializeToolsAsync(progress =>
+            ImGui.Text("Select a mod folder for import:");
+            ImGui.Separator();
+            ImGui.InputText("Filter", ref modFilter, 256);
+            ImGui.SameLine();
+            if (ImGui.Button("Refresh"))
             {
-                downloadProgress = progress;
-            }, plugin);
+                LoadModFolders();
+            }
+            if (!modFolders.Any())
+            {
+                LoadModFolders();
+            }
+            if (ImGui.BeginChild("ModList", new Vector2(0, 200), true))
+            {
+                foreach (var mod in modFolders)
+                {
+                    if (string.IsNullOrEmpty(modFilter) || mod.ToLower().Contains(modFilter.ToLower()))
+                    {
+                        if (ImGui.Selectable(mod))
+                        {
+                            selectedMod = mod;
+                            papListLoaded = false; // Neu scannen, falls Mod gewechselt wird
+                            papScanTask = null;
+                            playlistsLoaded = false;
+                            playlistLoadTask = null;
+                        }
+                    }
+                }
+                ImGui.EndChild();
+            }
         }
-        catch (Exception ex)
+
+        private void LoadModFolders()
         {
-            processState = $"Error downloading tools: {ex.Message}";
-            Plugin.Log.Error($"Error downloading tools: {ex.Message}");
+            modFolders.Clear();
+            if (Directory.Exists(plugin.Configuration.PenumbraPath))
+            {
+                modFolders = Directory.GetDirectories(plugin.Configuration.PenumbraPath)
+                    .Select(Path.GetFileName)
+                    .ToList();
+            }
         }
-        finally
+
+        private void EnsurePlaylistsLoaded()
         {
-            isDownloadingTools = false;
+            if (playlistsLoaded || string.IsNullOrWhiteSpace(selectedMod)) return;
+
+            var dirPath = Path.Combine(plugin.Configuration.PenumbraPath, selectedMod);
+            if (!Directory.Exists(dirPath)) return;
+
+            if (playlistLoadTask == null)
+            {
+                playlistLoadTask = FileManager.GetPlaylistsAsync(dirPath);
+                processState = "Loading playlists...";
+            }
+
+            if (playlistLoadTask.IsCompleted)
+            {
+                availablePlaylists = playlistLoadTask.Result;
+                playlistsLoaded = true;
+                playlistLoadTask = null;
+                processState = string.Empty;
+                if (selectedPlaylistIndex >= availablePlaylists.Count)
+                    selectedPlaylistIndex = 0;
+            }
         }
-    });
-}
+
+        private List<GroupedPapEntry> FilterPapEntries(List<GroupedPapEntry> source, string filter)
+        {
+            if (string.IsNullOrEmpty(filter)) return source;
+            var low = filter.ToLowerInvariant();
+            return source.Where(e =>
+                e.PapPath.ToLowerInvariant().Contains(low) ||
+                e.References.Any(r =>
+                    r.OptionName.ToLowerInvariant().Contains(low) ||
+                    r.JsonFile.ToLowerInvariant().Contains(low)) ||
+                e.ScdDetails.Any(d =>
+                    d.SCDPath.ToLowerInvariant().Contains(low) ||
+                    d.AnimationName.ToLowerInvariant().Contains(low) ||
+                    d.ActorName.ToLowerInvariant().Contains(low))
+            ).ToList();
+        }
+
+        public void ChangeState(string change, bool newStep = false)
+        {
+            processState = change;
+            if (newStep) currentStep++;
+        }
+
+        private bool IsBusy()
+        {
+            if (isDownloadingTools)
+                return true;
+            if (currentDownloadTask != null && !currentDownloadTask.IsCompleted)
+                return true;
+            if (papScanTask != null && !papScanTask.IsCompleted)
+                return true;
+            if (playlistLoadTask != null && !playlistLoadTask.IsCompleted)
+                return true;
+            return false;
+        }
+
+        private void DrawProcessStateUi()
+        {
+            if (string.IsNullOrEmpty(processState))
+                return;
+
+            ImGui.BeginChild("ProcessState", new Vector2(0, 50), true);
+
+            var color = ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
+            if (processState.StartsWith("Error", StringComparison.OrdinalIgnoreCase))
+                color = ColorHelpers.Vector(System.Drawing.KnownColor.Red);
+            else if (processState.StartsWith("Done", StringComparison.OrdinalIgnoreCase))
+                color = ColorHelpers.Vector(System.Drawing.KnownColor.LawnGreen);
+
+            ImGui.PushStyleColor(ImGuiCol.Text, color);
+            ImGui.TextWrapped(processState);
+            ImGui.PopStyleColor();
+
+            if (currentStep >= 0 && importSteps.Length > 1)
+            {
+                float value = (float)currentStep / (importSteps.Length - 1);
+                ImGui.ProgressBar(value, new Vector2(-1, 0));
+            }
+
+            ImGui.EndChild();
+        }
+
+        /// <summary>
+        /// Asynchronous method to download audio, convert it, build a new SCD file,
+        /// and for each selected PAP either update the existing SCD or inject a new one.
+        /// Anschließend wird in den JSONs der mod-spezifische Song-Eintrag aktualisiert.
+        /// </summary>
+        private async Task DownloadConvertAsync()
+        {
+            try
+            {
+                // 1) YouTube-Link validieren
+                if (string.IsNullOrWhiteSpace(youtubeLink))
+                {
+                    currentStep = -1;
+                    processState = "No YouTube link provided.";
+                    Plugin.Log.Warning(processState);
+                    return;
+                }
+                if (userSelectedPapEntries == null || userSelectedPapEntries.Count == 0)
+                {
+                    currentStep = -1;
+                    processState = "No PAP selected (userSelectedPapEntries is empty).";
+                    return;
+                }
+                var dirPath = Path.Combine(plugin.Configuration.PenumbraPath, selectedMod);
+                FileManager.ScanForSoundyDir(dirPath);
+
+                var random = new Random();
+                int rand = random.Next(9999);
+                int rand2 = random.Next(9999);
+                currentStep = 0;
+                processState = importSteps[currentStep];
+                await Task.Yield();
+                ResourceChecker.CheckDJ(plugin);
+
+                string tempMp3 = Path.Combine(Path.GetTempPath(), $"{rand}_{saveName}_{rand2}.wav");
+                string finalOgg = Path.Combine(Path.GetTempPath(), $"{rand}_{saveName}_{rand2}.ogg");
+
+                // Erzeugen eines neuen SCD-Files
+                string scdPath = Path.Combine(dirPath, "soundy", "songs",
+                    $"{rand}_{saveName}_{rand2}.scd");
+
+                string samplePath;
+                if (plugin.Configuration.Choice == 0)
+                {
+                    samplePath = Path.Combine(Configuration.Resources, "test.scd");
+                }
+                else
+                {
+                    samplePath = Path.Combine(Configuration.Resources, $"test{plugin.Configuration.Choice}.scd");
+                }
+
+                currentStep = 1;
+                processState = importSteps[currentStep];
+                await Task.Run(async () =>
+                {
+                    await YoutubeDownloader.UpdateYT();
+                });
+
+                // 2) Audio downloaden
+                currentStep = 2;
+                processState = importSteps[currentStep];
+
+                Plugin.Log.Information($"Downloading {youtubeLink} -> {tempMp3}");
+                await Task.Run(async () =>
+                {
+                    //await YoutubeDownloader.DownloadAudioAsync(youtubeLink, tempMp3, useMp3: true);
+                    await YoutubeDownloadAndConvert.DownloadAndConvertAsync(
+                        youtubeUrl: youtubeLink,
+                        outputOggFile: finalOgg,
+                        userVolume: 1.0f,   // -> ~2.0-Faktor => +6 dB
+                        applyLimiter: true, // Verhindert hartes Clipping
+                        quality: 5,         // Höchste Vorbis-Qualität
+                        main: this
+                    );
+                });
+
+                // 3) Audio konvertieren
+
+                //try
+                //{
+                //    await Task.Run(() =>
+                //    {
+                //        AudioConverter.ConvertToOgg44100(tempMp3, finalOgg, plugin.Configuration.Volume);
+                //    });
+                //}
+                //catch (Exception ex)
+                //{
+                //    processState = $"FFmpeg failed or timed out: {ex.Message}";
+                //    Plugin.Log.Error($"FFmpeg error: {ex.Message}");
+                //    return;
+                //}
+
+                // 4) Neues SCD-File erstellen
+                currentStep = 3;
+                processState = importSteps[currentStep];
+                Plugin.Log.Information($"Building SCD: {samplePath} + {finalOgg} -> {scdPath}");
+                try
+                {
+                    ScdEdit.CreateScd(samplePath, scdPath, finalOgg);
+                }
+                catch (Exception ex)
+                {
+                    currentStep = -1;
+                    processState = $"Error with creating scd: {ex}";
+                    return;
+                }
+
+                // 5) Für jeden ausgewählten PAP-Eintrag:
+                //    - Falls bereits ein SCD in der PAP vorhanden ist, wird dieser mit dem neuen SCD überschrieben.
+                //    - Andernfalls wird der neue SCD in die PAP injiziert.
+                currentStep = 4;
+                processState = importSteps[currentStep];
+                List<string> finalSCDPaths = new List<string>();
+                Dictionary<string, string> replacements = new();
+                var count = -1;
+                foreach (var papEntry in userSelectedPapEntries)
+                {
+                    count++;
+                    // Erstelle einen absoluten Pfad für die PAP-Datei
+                    string currentPapPath = Path.Combine(dirPath, papEntry.PapPath);
+                    if (!File.Exists(currentPapPath))
+                    {
+                        Plugin.Log.Warning($"PAP not found: {currentPapPath}");
+                        continue;
+                    }
+                    string newPap = Path.Combine("soundy", "paps", $"injected_{Path.GetFileName(papEntry.PapPath)}");
+                    string newPapPath = Path.Combine(dirPath, newPap);
+                    if (papEntry.ScdDetails.Count < 1)
+                    {
+                        // Überschreibe den vorhandenen SCD in der PAP
+                        // Hier rufen wir PapInjector.InjectSound auf – in diesem Beispiel nehmen wir an,
+                        // dass das Überschreiben im selben File (currentPapPath) erfolgt.
+                        string customRoute = $"soundy/sounds/{rand}_{rand2}.scd";
+
+                        try
+                        {
+                            await Svc.Framework.RunOnTick(() =>
+                            {
+                                PapInjector.InjectSound(customRoute, currentPapPath, newPapPath);
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            currentStep = -1;
+                            processState = $"Error in Injecting: {ex.Message}";
+                            return;
+                        }
+
+                        replacements.Add(papEntry.PapPath, newPap);
+
+                        finalSCDPaths.Add(customRoute);
+                    }
+                    else
+                    {
+                        // Es gibt keinen SCD in der PAP – injiziere den neuen Sound.
+                        // Bestimme einen neuen Pfad für die aktualisierte PAP (z.B. in "soundy/paps")
+                        //PapInjector.InjectSound(scdPath, currentPapPath, newPapPath);
+                        foreach (var scd in papEntry.ScdDetails)
+                        {
+                            finalSCDPaths.Add(scd.SCDPath);
+                        }
+                    }
+
+                }
+
+                if (replacements.Count > 0)
+                    FileManager.ReplacePaps(dirPath, replacements);
+
+                // 6) JSON aktualisieren: Es wird für jeden PAP-Eintrag der neue SCD-Pfad eingetragen.
+                currentStep = 5;
+                processState = importSteps[currentStep];
+                Plugin.Log.Information($"AddSong: {finalSCDPaths.Count} sscdPaths -> {scdPath}");
+                try
+                {
+                    FileManager.AddSong(dirPath, finalSCDPaths, scdPath, saveName, playlistName.Trim());
+                }
+                catch (Exception ex)
+                {
+                    currentStep = -1;
+                    processState = $"Error in AddSong: {ex.Message}";
+                    return;
+                }
+
+                currentStep = 6;
+                processState = importSteps[currentStep];
+                papListLoaded = false;
+                papScanTask = null;
+                playlistsLoaded = false;
+                playlistLoadTask = null;
+                plugin.RefreshMods();
+            }
+            catch (Exception ex)
+            {
+                currentStep = -1;
+                processState = $"Error: {ex.Message}";
+                Plugin.Log.Error($"Error in DownloadConvertAsync: {ex.Message}");
+            }
+        }
+
+        private void StartDownloadTools()
+        {
+            isDownloadingTools = true;
+            downloadProgress = "0%";
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await ToolLoader.InitializeToolsAsync(progress =>
+                    {
+                        downloadProgress = progress;
+                    }, plugin);
+                }
+                catch (Exception ex)
+                {
+                    processState = $"Error downloading tools: {ex.Message}";
+                    Plugin.Log.Error($"Error downloading tools: {ex.Message}");
+                }
+                finally
+                {
+                    isDownloadingTools = false;
+                }
+            });
+        }
     }
 }
