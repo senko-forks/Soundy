@@ -68,7 +68,7 @@ namespace Soundy.Pap
             public string ActorName { get; set; } = "";
         }
 
-        public unsafe static List<GroupedPapEntry> ScanForPapDetailsGrouped(string dirPath, ref string state)
+        public unsafe static List<GroupedPapEntry> ScanForPapDetailsGrouped(string dirPath, Action<string>? stateUpdate = null)
         {
             // Zuerst: Durchsuche alle JSON-Dateien im Verzeichnis und sammle die PAP-Referenzen.
             var rawList = new List<(string JsonFile, string OptionName, string GroupName, string PapPath)>();
@@ -79,7 +79,7 @@ namespace Soundy.Pap
             foreach (var file in jsonFiles)
             {
                 count++;
-                state = $"Scanning files... ({count}/{countMax})";
+                stateUpdate?.Invoke($"Scanning files... ({count}/{countMax})");
                 try
                 {
                     string json = File.ReadAllText(file);
@@ -144,7 +144,7 @@ namespace Soundy.Pap
             foreach (var group in groups)
             {
                 count++;
-                state = $"Scanning animations... ({count}/{countMax})";
+                stateUpdate?.Invoke($"Scanning animations... ({count}/{countMax})");
                 // Falls der PAP-Pfad relativ ist, kombinieren wir ihn mit dem Mod-Verzeichnis:
                 string absolutePapPath = Path.Combine(dirPath, group.PapPath);
                 var random = new Random();
@@ -192,7 +192,7 @@ namespace Soundy.Pap
                 }
                 catch (Exception ex)
                 {
-                    state = $"{ex}";
+                    stateUpdate?.Invoke($"{ex}");
                 }
             }
 
@@ -201,13 +201,7 @@ namespace Soundy.Pap
 
         public static Task<List<GroupedPapEntry>> ScanForPapDetailsGroupedAsync(string dirPath, Action<string>? stateUpdate = null)
         {
-            return Task.Run(() =>
-            {
-                string status = string.Empty;
-                var result = ScanForPapDetailsGrouped(dirPath, ref status);
-                stateUpdate?.Invoke(status);
-                return result;
-            });
+            return Task.Run(() => ScanForPapDetailsGrouped(dirPath, stateUpdate));
         }
 
         private static PapFile LoadPapOnMainThread(string path)

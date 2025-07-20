@@ -148,8 +148,7 @@ namespace Soundy.Windows
                     plugin.ToggleConfigUI();
                 }
                 ImGui.PushStyleColor(ImGuiCol.Text, ColorHelpers.Vector(System.Drawing.KnownColor.Orange));
-                ImGui.TextWrapped("Be careful with large mods, such as \"Eorzean Nightlife.\" The plugin might block your game until it has loaded all the animation files (.pap).");
-                ImGui.TextWrapped("The plugin is still in open beta. Some features might not work or perform perfectly yet.If you encounter any issues, feel free to report them on our Discord server.");
+                ImGui.TextWrapped("If you encounter any issues, feel free to report them on our Discord server.");
                 ImGui.PopStyleColor();
 
                 return;
