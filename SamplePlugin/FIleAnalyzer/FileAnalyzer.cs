@@ -6,6 +6,7 @@ using System.Linq;
 using ECommons;
 using Lumina.Excel.Sheets;
 using Newtonsoft.Json;
+using System.Threading.Tasks;
 using static FFXIVClientStructs.FFXIV.Client.LayoutEngine.FileLayerGroupLayerFilter;
 
 namespace Soundy.FileAnalyzer
@@ -200,41 +201,71 @@ namespace Soundy.FileAnalyzer
 
         /// <summary>
         /// AddSong:
-        /// Sucht im Hauptverzeichnis nach einer JSON-Datei, die auf *_soundy.json endet.
-        /// Falls keine gefunden wird, wird eine neue Datei "group_099_soundy.json" mit einem Standardtemplate erzeugt.
+        /// Sucht im Hauptverzeichnis nach einer JSON-Datei "group_*.json" deren
+        /// <c>Name</c>-Feld (im JSON) der angegebenen Playlist entspricht
+        /// (Groß-/Kleinschreibung wird ignoriert).
+        /// Falls keine gefunden wird, wird eine neue Datei "group_XXX_{playlistName}.json"
+        /// mit einem Standardtemplate erzeugt. Dabei ist XXX der nächste freie
+        /// Gruppenindex.
         /// Anschließend wird ein neuer Song-Eintrag (Option) mit den angegebenen Daten hinzugefügt.
         /// </summary>
-        public static void AddSong(string dirPath, List<string> scdRoute, string newSong, string newSongName)
+        public static void AddSong(string dirPath, List<string> scdRoute, string newSong, string newSongName, string playlistName = "soundy")
         {
-            // 1) JSON-Datei suchen
-            var soundyJsonFiles = Directory.GetFiles(dirPath, "*_soundy.json", SearchOption.TopDirectoryOnly);
-            SoundyJsonRoot soundyJson;
-            string targetFile;
+            if (string.IsNullOrWhiteSpace(playlistName)) playlistName = "soundy";
 
-            // 2) Falls keine Soundy-Datei existiert, legen wir eine neue an:
-            if (soundyJsonFiles.Length == 0)
+            // 1) JSON-Datei anhand des Namens-Feldes suchen
+            var groupFiles = Directory.GetFiles(dirPath, "group_*.json", SearchOption.TopDirectoryOnly);
+            SoundyJsonRoot? soundyJson = null;
+            string? targetFile = null;
+
+            foreach (var file in groupFiles)
             {
-                var groupJsons = Directory.GetFiles(dirPath, "group_*.json", SearchOption.TopDirectoryOnly);
-                int index = groupJsons.Length + 1;
+                try
+                {
+                    var json = File.ReadAllText(file);
+                    var root = JsonConvert.DeserializeObject<SoundyJsonRoot>(json);
+                    if (root?.Name != null &&
+                        root.Name.Trim().Equals(playlistName.Trim(), StringComparison.OrdinalIgnoreCase))
+                    {
+                        soundyJson = root;
+                        targetFile = file;
 
-                // "D3" bedeutet "Format als Dezimalzahl, mit 3 Ziffern und voran­gestellten 0"
+                        // Nach dem Deserialisieren Files-Collections frisch instanziieren
+                        if (soundyJson.Options != null)
+                        {
+                            foreach (var opt in soundyJson.Options)
+                            {
+                                var oldDict = opt.Files ?? new Dictionary<string, string>();
+                                opt.Files = new Dictionary<string, string>(oldDict);
+                            }
+                        }
+                        break;
+                    }
+                }
+                catch
+                {
+                    // Wenn eine Datei fehlerhaft ist, ignorieren wir sie einfach
+                }
+            }
+
+            // 2) Falls keine passende Datei existiert, eine neue anlegen
+            if (soundyJson == null || targetFile == null)
+            {
+                var index = groupFiles.Length + 1;
                 string indexPadded = index.ToString("D3");
+                var safeName = SanitizeFileName(playlistName);
+                targetFile = Path.Combine(dirPath, $"group_{indexPadded}_{safeName}.json");
 
-                // Dann bauen wir den Dateinamen zusammen:
-                targetFile = Path.Combine(dirPath, $"group_{indexPadded}_soundy.json");
-
-                // Standard-Template
                 soundyJson = new SoundyJsonRoot
                 {
                     Version = "1.0.0",
-                    Name = "Soundy",
+                    Name = playlistName,
                     Description = "Imported Tracks.",
                     Priority = 9999,
                     Type = "Single",
                     DefaultSettings = 0,
                     Options = new List<Option>
                     {
-                        // wir haben initial nur eine Off-Option:
                         new Option
                         {
                             Name = "Off",
@@ -246,44 +277,8 @@ namespace Soundy.FileAnalyzer
                     }
                 };
             }
-            else
-            {
-                // Soundy-File laden
-                targetFile = soundyJsonFiles[0];
-                string json = File.ReadAllText(targetFile);
-                soundyJson = JsonConvert.DeserializeObject<SoundyJsonRoot>(json)
-                    ?? new SoundyJsonRoot
-                    {
-                        Version = "1.0.0",
-                        Name = "Soundy",
-                        Description = "Imported Tracks.",
-                        Priority = 9999,
-                        Type = "Single",
-                        DefaultSettings = 0,
-                        Options = new List<Option>
-                        {
-                            new Option
-                            {
-                                Name = "Off",
-                                Description = "",
-                                Files = new Dictionary<string, string>(),
-                                FileSwaps = new Dictionary<string, string>(),
-                                Manipulations = new List<object>()
-                            }
-                        }
-                    };
 
-                // **WICHTIG**: Nach dem Deserialisieren jede Files-Collection
-                // durch eine "frische" Dictionary-Instanz ersetzen.
-                if (soundyJson.Options != null)
-                {
-                    foreach (var opt in soundyJson.Options)
-                    {
-                        var oldDict = opt.Files ?? new Dictionary<string, string>();
-                        opt.Files = new Dictionary<string, string>(oldDict);
-                    }
-                }
-            }
+
 
             // 3) Neue Einträge anlegen (Song-Files füllen)
             var files = new Dictionary<string, string>();
@@ -310,6 +305,44 @@ namespace Soundy.FileAnalyzer
             string updatedJson = JsonConvert.SerializeObject(soundyJson, Formatting.Indented);
             Plugin.Log.Information($"Writing Soundy JSON to {targetFile} with {soundyJson.Options.Count} options.");
             File.WriteAllText(targetFile, updatedJson);
+        }
+
+        private static string SanitizeFileName(string name)
+        {
+            var invalid = Path.GetInvalidFileNameChars();
+            foreach (var c in invalid)
+            {
+                name = name.Replace(c, '_');
+            }
+            return name.Replace(' ', '_');
+        }
+
+        public static List<string> GetPlaylists(string dirPath)
+        {
+            var result = new List<string>();
+            var groupFiles = Directory.GetFiles(dirPath, "group_*.json", SearchOption.TopDirectoryOnly);
+            foreach (var file in groupFiles)
+            {
+                try
+                {
+                    var json = File.ReadAllText(file);
+                    var root = JsonConvert.DeserializeObject<SoundyJsonRoot>(json);
+                    if (root?.Name != null)
+                    {
+                        result.Add(root.Name);
+                    }
+                }
+                catch
+                {
+                    // ignore invalid json
+                }
+            }
+            return result;
+        }
+
+        public static Task<List<string>> GetPlaylistsAsync(string dirPath)
+        {
+            return Task.Run(() => GetPlaylists(dirPath));
         }
 
 

@@ -5,8 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using VfxEditor.PapFormat; // Angenommen, hier liegt die PapFile-Klasse
 using VfxEditor.TmbFormat.Entries; // Für den C063-Typ
+using ECommons.DalamudServices;
 
 namespace Soundy.Pap
 {
@@ -45,6 +47,7 @@ namespace Soundy.Pap
         {
             public string JsonFile { get; set; } = "";
             public string OptionName { get; set; } = "";
+            public string GroupName { get; set; } = "";
         }
 
         public class PapScdDetail
@@ -68,7 +71,7 @@ namespace Soundy.Pap
         public unsafe static List<GroupedPapEntry> ScanForPapDetailsGrouped(string dirPath, ref string state)
         {
             // Zuerst: Durchsuche alle JSON-Dateien im Verzeichnis und sammle die PAP-Referenzen.
-            var rawList = new List<(string JsonFile, string OptionName, string PapPath)>();
+            var rawList = new List<(string JsonFile, string OptionName, string GroupName, string PapPath)>();
 
             var jsonFiles = Directory.GetFiles(dirPath, "*.json", SearchOption.TopDirectoryOnly);
             foreach (var file in jsonFiles)
@@ -86,7 +89,7 @@ namespace Soundy.Pap
                         {
                             if (key.EndsWith(".pap", StringComparison.OrdinalIgnoreCase))
                             {
-                                rawList.Add((file, "(root)", root.Files[key]));
+                                rawList.Add((file, "(root)", root.Name ?? "", root.Files[key]));
                             }
                         }
                     }
@@ -101,7 +104,7 @@ namespace Soundy.Pap
                             {
                                 if (key.EndsWith(".pap", StringComparison.OrdinalIgnoreCase))
                                 {
-                                    rawList.Add((file, opt.Name ?? "(no name)", opt.Files[key]));
+                                    rawList.Add((file, opt.Name ?? "(no name)", root.Name ?? "", opt.Files[key]));
                                 }
                             }
                         }
@@ -122,10 +125,12 @@ namespace Soundy.Pap
                     References = g.Select(x => new PapReference
                     {
                         JsonFile = x.JsonFile,
-                        OptionName = x.OptionName
+                        OptionName = x.OptionName,
+                        GroupName = x.GroupName
                     }).ToList(),
                     ScdDetails = new List<PapScdDetail>()
                 })
+                .Where(g => File.Exists(Path.Combine(dirPath, g.PapPath)))
                 .ToList();
 
             // Nun: Für jede gefundene PAP-Datei den Inhalt laden und darin nach SCD-Einträgen suchen.
@@ -141,16 +146,14 @@ namespace Soundy.Pap
                 {
                     // Hier nehmen wir an, dass du in deinem PapInjector eine Methode implementierst,
                     // die öffentlich zugänglich ist, z. B. LoadPapForScanning, die einen PapFile zurückgibt.
-                    PapFile pap = PapInjector.LoadPap(absolutePapPath);
+                    PapFile pap = LoadPapOnMainThread(absolutePapPath);
 
                     // Durchlaufe alle Animationen im PAP.
                     foreach (var anim in pap.Animations)
                     {
                         // Falls Animationen keinen Namen haben, kannst du hier einen Standardwert vergeben.
                         string animationName = string.IsNullOrEmpty(anim.GetName()) ? "Unnamed Animation" : anim.GetName();
-                        
-                        // TODO:
-                        // aktueller animationName beispiel: 
+
 
                         if (anim.Tmb == null)
                             continue;
@@ -185,6 +188,34 @@ namespace Soundy.Pap
             }
 
             return groups;
+        }
+
+        public static Task<List<GroupedPapEntry>> ScanForPapDetailsGroupedAsync(string dirPath, Action<string>? stateUpdate = null)
+        {
+            return Task.Run(() =>
+            {
+                string status = string.Empty;
+                var result = ScanForPapDetailsGrouped(dirPath, ref status);
+                stateUpdate?.Invoke(status);
+                return result;
+            });
+        }
+
+        private static PapFile LoadPapOnMainThread(string path)
+        {
+            var tcs = new TaskCompletionSource<PapFile>();
+            Svc.Framework?.RunOnFrameworkThread(() =>
+            {
+                try
+                {
+                    tcs.SetResult(PapInjector.LoadPap(path));
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            });
+            return tcs.Task.GetAwaiter().GetResult();
         }
 
     }
