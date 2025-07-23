@@ -246,7 +246,7 @@ namespace Soundy.Windows
                 {
                     ImGui.Text(processState);
                     return;
-                }
+                } 
 
                 try
                 {

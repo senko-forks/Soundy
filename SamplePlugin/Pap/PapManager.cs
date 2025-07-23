@@ -195,7 +195,7 @@ namespace Soundy.Pap
                     stateUpdate?.Invoke($"{ex}");
                 }
             }
-
+            stateUpdate?.Invoke($"");
             return groups;
         }
 
