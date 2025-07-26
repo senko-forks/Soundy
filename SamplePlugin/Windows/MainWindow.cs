@@ -20,6 +20,7 @@ using Lumina.Excel.Sheets;
 using static FFXIVClientStructs.FFXIV.Client.UI.Misc.GroupPoseModule;
 using System.Diagnostics.Metrics;
 using ECommons.ImGuiMethods;
+using System.Text.RegularExpressions;
 
 namespace Soundy.Windows
 {
@@ -68,6 +69,8 @@ namespace Soundy.Windows
         private Task<List<string>>? playlistLoadTask;
 
         private bool showPapHelp = false;
+        private bool showAdvancedScd = false;
+        private bool scdLoopEnabled = true;
 
         // Step-based progress for import process
         private readonly string[] importSteps = new[]
@@ -88,7 +91,7 @@ namespace Soundy.Windows
             this.plugin = plugin;
             this.SizeConstraints = new WindowSizeConstraints
             {
-                MinimumSize = new Vector2(850, 600),
+                MinimumSize = new Vector2(905, 600),
                 MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
             };
             TitleBarButtons.Add(Support.NavBarBtn);
@@ -350,6 +353,10 @@ namespace Soundy.Windows
                 ImGui.EndTable();
             }
 
+            if (ImGui.Button("Advanced SCD Editing"))
+            {
+                showAdvancedScd = true;
+            }
 
             ImGui.Spacing();
 
@@ -378,6 +385,24 @@ namespace Soundy.Windows
             ImGui.Separator();
             ImGui.Spacing();
             DrawProcessStateUi();
+
+            if (showAdvancedScd)
+            {
+                ImGui.OpenPopup("AdvancedScdPopup");
+                showAdvancedScd = false;
+            }
+
+            bool advOpen = true;
+            ImGui.SetNextWindowSize(new Vector2(300, 100), ImGuiCond.Appearing);
+            if (ImGui.BeginPopupModal("AdvancedScdPopup", ref advOpen, ImGuiWindowFlags.AlwaysAutoResize))
+            {
+                ImGui.Checkbox("Enable Loop", ref scdLoopEnabled);
+                if (ImGui.Button("Close"))
+                {
+                    ImGui.CloseCurrentPopup();
+                }
+                ImGui.EndPopup();
+            }
 
             if (showPapHelp)
             {
@@ -528,7 +553,7 @@ namespace Soundy.Windows
             if (string.IsNullOrEmpty(processState))
                 return;
 
-            ImGui.BeginChild("ProcessState", new Vector2(0, 50), true);
+            ImGui.BeginChild("ProcessState", new Vector2(0, 60), true);
 
             var color = ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
             if (processState.StartsWith("Error", StringComparison.OrdinalIgnoreCase))
@@ -546,6 +571,15 @@ namespace Soundy.Windows
                 ImGui.ProgressBar(value, new Vector2(-1, 0));
             }
 
+            if (processState.StartsWith("Error", StringComparison.OrdinalIgnoreCase))
+            {
+                if (ImGui.Button("Copy Error to Clipboard"))
+                {
+                    var logs = GetSoundyLogs();
+                    ImGui.SetClipboardText(logs);
+                }
+            }
+
             ImGui.EndChild();
         }
 
@@ -556,6 +590,7 @@ namespace Soundy.Windows
         /// </summary>
         private async Task DownloadConvertAsync()
         {
+            saveName = SanitizeFileName(saveName.Trim());
             string tempMp3 = string.Empty;
             string finalOgg = string.Empty;
             try
@@ -649,7 +684,7 @@ namespace Soundy.Windows
                 Plugin.Log.Information($"Building SCD: {samplePath} + {finalOgg} -> {scdPath}");
                 try
                 {
-                    ScdEdit.CreateScd(samplePath, scdPath, finalOgg);
+                    ScdEdit.CreateScd(samplePath, scdPath, finalOgg, scdLoopEnabled);
                 }
                 catch (Exception ex)
                 {
@@ -778,6 +813,68 @@ namespace Soundy.Windows
                     isDownloadingTools = false;
                 }
             });
+        }
+
+        private string GetSoundyLogs(int lineCount = 50)
+        {
+            try
+            {
+                var configDir = Plugin.PluginInterface.GetPluginConfigDirectory();
+                var parent = Directory.GetParent(configDir)?.Parent;
+                if (parent == null) return processState;
+
+                var logFiles = Directory.GetFiles(parent.FullName, "dalamud.log", SearchOption.AllDirectories);
+                var logFile = logFiles.FirstOrDefault(f => Path.GetFileName(f).Contains("dalamud", StringComparison.OrdinalIgnoreCase))
+                               ?? logFiles.FirstOrDefault();
+                if (logFile == null) return processState;
+
+                using var fs = File.Open(logFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using var sr = new StreamReader(fs);
+                var lines = new List<string>();
+                var timestamp = new System.Text.RegularExpressions.Regex(@"^\d{4}-\d{2}-\d{2}");
+                bool includeContinuation = false;
+                while (!sr.EndOfStream)
+                {
+                    var line = sr.ReadLine();
+                    if (line == null) continue;
+
+                    if (line.Contains("Soundy", StringComparison.OrdinalIgnoreCase))
+                    {
+                        lines.Add(line);
+                        includeContinuation = true;
+                    }
+                    else if (includeContinuation && !timestamp.IsMatch(line))
+                    {
+                        lines.Add(line);
+                    }
+                    else
+                    {
+                        includeContinuation = false;
+                    }
+                }
+                return string.Join("\n", lines.TakeLast(lineCount));
+            }
+            catch (Exception ex)
+            {
+                return $"{processState}\nFailed to read logs: {ex.Message}";
+            }
+        }
+        static string SanitizeFileName(string input)
+        {
+            // Ungültige Zeichen durch Unterstrich ersetzen
+            string invalidChars = Regex.Escape(new string(Path.GetInvalidFileNameChars()));
+            string invalidRegStr = $"[{invalidChars}]";
+
+            string result = Regex.Replace(input, invalidRegStr, "_");
+
+            // Optional: Leerzeichen trimmen und leeren Namen abfangen
+            result = result.Trim();
+            if (string.IsNullOrWhiteSpace(result))
+            {
+                result = "default_save";
+            }
+
+            return result;
         }
     }
 }

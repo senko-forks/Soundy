@@ -19,8 +19,9 @@ namespace Soundy.Scd
         /// <param name="oggTemplatePath">(Optional) Pfad, der als Marker im Template dient – falls benötigt</param>
         /// <param name="newScdPath">Pfad, an dem das neue SCD gespeichert werden soll</param>
         /// <param name="replaceOggPath">Pfad zur neuen OGG-Datei, die den Template ersetzen soll</param>
+        /// <param name="enableLoop">Soll das Ergebnis geloopt werden?</param>
         /// <returns>true, wenn die Ersetzung erfolgreich war; false, wenn kein passender Audio-Eintrag gefunden wurde</returns>
-        public static void CreateScd(string scdTemplatePath, string newScdPath, string oggPath)
+        public static void CreateScd(string scdTemplatePath, string newScdPath, string oggPath, bool enableLoop = true)
         {
             using (var fs = File.OpenRead(scdTemplatePath))
             using (var br = new BinaryReader(fs))
@@ -38,10 +39,15 @@ namespace Soundy.Scd
                     WaveStream stream = newData.Data.GetStream();
                     TimeSpan totalTime = stream.TotalTime;
                     float totalSec = (float)totalTime.TotalSeconds;
+
                     var lstart = newData.Data.TimeToBytes(0f);
-                    var ltotal = newData.Data.TimeToBytes(totalSec);
+                    var lend = newData.Data.TimeToBytes(totalSec);
+                    if (!enableLoop)
+                    {
+                        lend = newData.Data.TimeToBytes(0f);
+                    }
                     newData.LoopStart = lstart;
-                    newData.LoopEnd = ltotal;
+                    newData.LoopEnd = lend;
 
                     Plugin.Log.Information("ImportOgg zurück: " + (newData != null));
                 }
@@ -50,7 +56,7 @@ namespace Soundy.Scd
                     Plugin.Log.Error("CATCH in ImportOgg: " + ex);
                     throw;
                 }
-                
+
                 if (newData == null)
                 {
                     Plugin.Log.Error("ImportOgg hat null zurückgegeben.");
@@ -58,7 +64,7 @@ namespace Soundy.Scd
                 }
 
                 file.Replace(original, newData);
-                
+
                 Plugin.Log.Information("Audio-Daten erfolgreich ersetzt.");
 
 
