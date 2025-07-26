@@ -167,17 +167,6 @@ namespace Soundy.Windows
                     playlistLoadTask = null;
                     return;
                 }
-                ImGui.SameLine();
-                if (ImGui.Button("Reset Mod to Default"))
-                {
-                    var dirPath = Path.Combine(plugin.Configuration.PenumbraPath, selectedMod);
-                    FileManager.ResetMod(dirPath);
-                    papListLoaded = false;
-                    papScanTask = null;
-                    playlistsLoaded = false;
-                    playlistLoadTask = null;
-                    plugin.RefreshMods();
-                }
                 ImGui.Separator();
 
                 if (!playlistsLoaded)
@@ -246,7 +235,7 @@ namespace Soundy.Windows
                 {
                     ImGui.Text(processState);
                     return;
-                } 
+                }
 
                 try
                 {
@@ -567,6 +556,8 @@ namespace Soundy.Windows
         /// </summary>
         private async Task DownloadConvertAsync()
         {
+            string tempMp3 = string.Empty;
+            string finalOgg = string.Empty;
             try
             {
                 // 1) YouTube-Link validieren
@@ -594,8 +585,8 @@ namespace Soundy.Windows
                 await Task.Yield();
                 ResourceChecker.CheckDJ(plugin);
 
-                string tempMp3 = Path.Combine(Path.GetTempPath(), $"{rand}_{saveName}_{rand2}.wav");
-                string finalOgg = Path.Combine(Path.GetTempPath(), $"{rand}_{saveName}_{rand2}.ogg");
+                tempMp3 = Path.Combine(Path.GetTempPath(), $"{rand}_{saveName}_{rand2}.wav");
+                finalOgg = Path.Combine(Path.GetTempPath(), $"{rand}_{saveName}_{rand2}.ogg");
 
                 // Erzeugen eines neuen SCD-Files
                 string scdPath = Path.Combine(dirPath, "soundy", "songs",
@@ -756,6 +747,11 @@ namespace Soundy.Windows
                 currentStep = -1;
                 processState = $"Error: {ex.Message}";
                 Plugin.Log.Error($"Error in DownloadConvertAsync: {ex.Message}");
+            }
+            finally
+            {
+                try { if (!string.IsNullOrEmpty(tempMp3) && File.Exists(tempMp3)) File.Delete(tempMp3); } catch { }
+                try { if (!string.IsNullOrEmpty(finalOgg) && File.Exists(finalOgg)) File.Delete(finalOgg); } catch { }
             }
         }
 

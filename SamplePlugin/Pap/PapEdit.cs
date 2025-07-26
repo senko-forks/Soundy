@@ -26,12 +26,15 @@ namespace Soundy.Pap
             try
             {
                 string hkxTemp = Path.Combine(Path.GetTempPath(), $"{rand}_{rand2}" + ".hkx");
+                PapFile result;
                 using (var fs = File.OpenRead(path))
                 using (var br = new BinaryReader(fs))
                 {
                     // init = true: Havok-Daten werden normal gelesen
-                    return new PapFile(br, path, hkxTemp, true, true);
+                    result = new PapFile(br, path, hkxTemp, true, true);
                 }
+                try { if (File.Exists(hkxTemp)) File.Delete(hkxTemp); } catch { }
+                return result;
             }
             catch (Exception ex)
             {

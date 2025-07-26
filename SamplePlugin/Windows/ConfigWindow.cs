@@ -7,6 +7,7 @@ using Soundy.FileAnalyzer;
 using System.Numerics;
 using Dalamud.Utility;
 using System.Threading.Tasks;
+using Dalamud.Plugin.Services;
 
 namespace Soundy.Windows
 {
@@ -140,6 +141,22 @@ namespace Soundy.Windows
 
             }
 
+            ImGui.Spacing();
+            ImGui.Separator();
+            ImGui.Spacing();
+
+            if (ImGui.Button("Clear Temp Files"))
+            {
+                int deleted = TempFileCleaner.DeleteOldTempFiles();
+                if (deleted > 0)
+                {
+                    plugin.SendError($"Deleted {deleted} old temp files.");
+                }
+                else
+                {
+                    plugin.SendError("No old temp files found to delete.");
+                }
+            }
 
             ImGui.Spacing();
             ImGui.Separator();

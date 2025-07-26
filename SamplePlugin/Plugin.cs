@@ -20,6 +20,7 @@ namespace Soundy
         [PluginService] internal static IClientState ClientState { get; private set; } = null!;
         [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
         [PluginService] internal static IPluginLog Log { get; private set; } = null!;
+        [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
 
         public string Name => "Soundy";
 
@@ -37,6 +38,7 @@ namespace Soundy
             // 1) Load or create configuration
             Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             Configuration.Save(); // Ensure the configuration is saved
+
             ResourceChecker.CheckResources();
 
             // 2) Tools are now downloaded via GUI, so remove ExtractTools() call
@@ -94,6 +96,11 @@ namespace Soundy
             {
                 Chat.Instance.SendMessage("/penumbra reload mods");
             });
+        }
+
+        public void SendError(string message)
+        {
+            ChatGui.PrintError(message);
         }
 
         private void DrawUI() => windowSystem.Draw();

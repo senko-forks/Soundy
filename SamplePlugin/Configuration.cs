@@ -1,45 +1,46 @@
 using Dalamud.Configuration;
 using System;
 using System.IO;
+using System.Runtime.Serialization;   // ← für OnDeserializedAttribute
 
 namespace Soundy
 {
     [Serializable]
-    public class Configuration : IPluginConfiguration
+    public sealed class Configuration : IPluginConfiguration
     {
-        public int Version { get; set; } = 1;
+        private const int CurrentConfigVersion = 2;   // ↔ Plugin-Version 1.1
+        public int Version { get; set; } = CurrentConfigVersion;
 
-        // User-defined paths
         public string PenumbraPath { get; set; } = "";
+        public float Volume { get; set; } = 1.0f;
+        public bool AreToolsDownloaded { get; set; }
 
-        public float Volume = 1.0f;
+        // ▸ Default = true, weil Neuinstallationen nichts aufräumen müssen
+        public bool TempCleanupDone { get; set; } = true;
 
-        // Tool download status
-        public bool AreToolsDownloaded { get; set; } = false;
+        public int Choice { get; set; }
+        public string ToolsZipUrl { get; set; } =
+            "https://github.com/lnjanos/yueImport/releases/download/release/tools.zip";
 
-        public int Choice { get; set; } = 0;
+        public static string BasePath => Plugin.PluginInterface.GetPluginConfigDirectory();
+        public static string ToolsPath => Path.Combine(BasePath, "tools");
+        public static string Resources => Path.Combine(BasePath, "resources");
 
-        // Download URL for the tools ZIP
-        public string ToolsZipUrl { get; set; } = "https://github.com/lnjanos/yueImport/releases/download/release/tools.zip";
-
-        // Base directories
-        public static string BasePath { get; } = Plugin.PluginInterface.GetPluginConfigDirectory();
-        public static string ToolsPath { get; } = Path.Combine(BasePath, "tools");
-        public static string Resources { get; } = Path.Combine(BasePath, "resources");
-        
-        public void SetVolume(float vol)
+        /* ----------------  MIGRATION CALLBACK  ---------------- */
+        [OnDeserialized]                     // wird NACH dem Laden aufgerufen
+        private void Migrate(StreamingContext _)
         {
-            this.Volume = vol;
+            if (Version < CurrentConfigVersion)   // ⇒ Upgrade von 1.0
+            {
+                TempCleanupDone = false;          // Cleanup einmalig nötig
+                Version = CurrentConfigVersion;
+                Save();                           // gleich wegschreiben
+            }
+            // Neuinstallationen kommen hier gar nicht rein (Version==2),
+            // TempCleanupDone bleibt daher auf true.
         }
+        /* ------------------------------------------------------ */
 
-        public float GetVolume()
-        {
-            return this.Volume;
-        }
-
-        public void Save()
-        {
-            Plugin.PluginInterface.SavePluginConfig(this);
-        }
+        public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
     }
 }
