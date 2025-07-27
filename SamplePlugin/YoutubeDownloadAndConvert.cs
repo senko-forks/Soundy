@@ -113,35 +113,63 @@ namespace Soundy
         /// <summary>
         /// Startet einen ffmpeg-Prozess synchron (ggf. async), wirf Exception bei Fehler.
         /// </summary>
-        private static void RunFfmpeg(string arguments, int timeoutMs = 60000)
+        private static void RunFfmpeg(string arguments, int timeoutMs = 60_000)
         {
             var exePath = ToolLoader.FfmpegPath;
+
             var si = new ProcessStartInfo
             {
                 FileName = exePath,
-                Arguments = arguments,
+                // Banner & STDIN unterdrücken, sonst alles wie gehabt
+                Arguments = "-nostdin -hide_banner -v info " + arguments,
                 UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
+
+                // wir wollen Log‑Zeilen => beide Pipes umleiten …
+                RedirectStandardError = true,   // FFmpeg schreibt alles Wesentliche hierhin
+                RedirectStandardOutput = true,   // Progress‑Zeilen landen gelegentlich auch hier
                 CreateNoWindow = true
             };
 
-            using var proc = Process.Start(si);
-            if (proc == null)
-                throw new Exception($"Failed to start ffmpeg: {arguments}");
+            using var proc = new Process { StartInfo = si, EnableRaisingEvents = true };
 
-            bool exited = proc.WaitForExit(timeoutMs);
-            if (!exited)
+            // ---------- asynchron LEER LESEN = Puffer kann nicht mehr volllaufen ----------
+            proc.ErrorDataReceived += (_, e) => {
+                if (!string.IsNullOrWhiteSpace(e.Data))
+                    Plugin.Log.Information($"[ffmpeg ERR] {e.Data}");
+            };
+            proc.OutputDataReceived += (_, e) => {
+                if (!string.IsNullOrWhiteSpace(e.Data))
+                    Plugin.Log.Information($"[ffmpeg OUT] {e.Data}");
+            };
+
+            try
             {
-                try { proc.Kill(); } catch { /* ignore */ }
-                throw new TimeoutException("ffmpeg timed out.");
+                proc.Start();
+                Plugin.Log.Information($"[ffmpeg] gestartet (PID {proc.Id})");
+
+                proc.BeginErrorReadLine();
+                proc.BeginOutputReadLine();
+
+                bool exited = proc.WaitForExit(timeoutMs);
+
+                if (!exited)
+                {
+                    proc.Kill(entireProcessTree: true);
+                    Plugin.Log.Error("[ffmpeg] Timeout – Prozess gekillt");
+                    throw new TimeoutException("ffmpeg timed out");
+                }
+
+                Plugin.Log.Information($"[ffmpeg] beendet (Exit {proc.ExitCode})");
+
+                if (proc.ExitCode != 0)
+                    throw new Exception($"ffmpeg exit code {proc.ExitCode}");
             }
-
-            var error = proc.StandardError.ReadToEnd();
-            if (proc.ExitCode != 0)
+            catch
             {
-                throw new Exception($"ffmpeg error code={proc.ExitCode}\n{error}");
+                // Exception erneut werfen, damit dein Aufrufer denselben Flow behält
+                throw;
             }
         }
+
     }
 }
