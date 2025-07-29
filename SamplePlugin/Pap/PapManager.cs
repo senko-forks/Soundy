@@ -155,7 +155,8 @@ namespace Soundy.Pap
                 {
                     // Hier nehmen wir an, dass du in deinem PapInjector eine Methode implementierst,
                     // die öffentlich zugänglich ist, z. B. LoadPapForScanning, die einen PapFile zurückgibt.
-                    PapFile pap = LoadPapOnMainThread(absolutePapPath);
+                    var loaded = LoadPapOnMainThread(absolutePapPath);
+                    PapFile pap = loaded.File;
 
                     // Durchlaufe alle Animationen im PAP.
                     foreach (var anim in pap.Animations)
@@ -189,6 +190,7 @@ namespace Soundy.Pap
                             }
                         }
                     }
+                    try { if (File.Exists(loaded.TempHkxPath)) File.Delete(loaded.TempHkxPath); } catch { }
                 }
                 catch (Exception ex)
                 {
@@ -204,9 +206,9 @@ namespace Soundy.Pap
             return Task.Run(() => ScanForPapDetailsGrouped(dirPath, stateUpdate));
         }
 
-        private static PapFile LoadPapOnMainThread(string path)
+        private static PapInjector.LoadedPap LoadPapOnMainThread(string path)
         {
-            var tcs = new TaskCompletionSource<PapFile>();
+            var tcs = new TaskCompletionSource<PapInjector.LoadedPap>();
             Svc.Framework?.RunOnFrameworkThread(() =>
             {
                 try

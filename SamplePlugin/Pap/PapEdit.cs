@@ -17,7 +17,13 @@ namespace Soundy.Pap
         /// Liest die gesamte Pap-Datei in einen Byte-Array, modifiziert den Havok-Datenbereich (falls vorhanden) 
         /// so, dass er höchstens 8 Bytes lang ist, und erzeugt dann ein PapFile aus diesen modifizierten Daten.
         /// </summary>
-        public static PapFile LoadPap(string path)
+        public struct LoadedPap
+        {
+            public PapFile File;
+            public string TempHkxPath;
+        }
+
+        public static LoadedPap LoadPap(string path)
         {
             var random = new Random();
             int rand = random.Next(9999);
@@ -33,8 +39,13 @@ namespace Soundy.Pap
                     // init = true: Havok-Daten werden normal gelesen
                     result = new PapFile(br, path, hkxTemp, true, true);
                 }
-                try { if (File.Exists(hkxTemp)) File.Delete(hkxTemp); } catch { }
-                return result;
+                // The temp HKX file is required later when the PapFile is
+                // written back to disk. Deleting it here caused a
+                // FileNotFoundException during the write step if a PAP was
+                // created for an animation that previously had no sound.
+                // Cleanup is handled separately by TempFileCleaner, so we
+                // keep the file around for now.
+                return new LoadedPap { File = result, TempHkxPath = hkxTemp };
             }
             catch (Exception ex)
             {
@@ -168,10 +179,13 @@ namespace Soundy.Pap
         public static void InjectSound(string scdPathInGame, string oldPapPath, string newPapPath)
         {
             PapFile pap = null;
+            string hkxTemp = "";
             try
             {
-                pap = LoadPap(oldPapPath);
-                Plugin.Log.Error($"Pap erfolgreich geladen: {oldPapPath}");
+                var loaded = LoadPap(oldPapPath);
+                pap = loaded.File;
+                hkxTemp = loaded.TempHkxPath;
+                Plugin.Log.Information($"Pap erfolgreich geladen: {oldPapPath}");
             }
             catch (Exception e)
             {
@@ -198,7 +212,7 @@ namespace Soundy.Pap
                         }
 
                         var actor = anim.Tmb.Actors[0]; // Beispiel: erster Actor
-                        Plugin.Log.Error("Verarbeite Actor in Animation");
+                        Plugin.Log.Information("Verarbeite Actor in Animation");
 
                         Tmtr soundTrack = null;
                         // Hier könntest du (falls gewünscht) nach einem vorhandenen Track suchen.
@@ -212,7 +226,7 @@ namespace Soundy.Pap
                                 soundTrack.Time.Value = 0;
                                 actor.Tracks.Add(soundTrack);
                                 anim.Tmb.AllTracks.Add(soundTrack);
-                                Plugin.Log.Error("Neuer Sound-Track erstellt und hinzugefügt");
+                                Plugin.Log.Information("Neuer Sound-Track erstellt und hinzugefügt");
                             }
                             catch (Exception ex)
                             {
@@ -230,7 +244,7 @@ namespace Soundy.Pap
                                 soundEntry.Time.Value = 1;  // Relative Zeit im Track
                                 soundTrack.Entries.Add(soundEntry);
                                 anim.Tmb.AllEntries.Add(soundEntry);
-                                Plugin.Log.Error("Neuer Sound-Entry erstellt und hinzugefügt");
+                                Plugin.Log.Information("Neuer Sound-Entry erstellt und hinzugefügt");
                             }
 
                             // Setze die Parameter des C063-Eintrags
@@ -239,7 +253,7 @@ namespace Soundy.Pap
                             SetTmbOffsetStringValue(soundEntry, "Path", scdPathInGame);
                             SetParsedIntValue(soundEntry, "SoundIndex", 0);
                             SetParsedIntValue(soundEntry, "SoundPosition", 99);
-                            Plugin.Log.Error("Sound-Entry Parameter gesetzt");
+                            Plugin.Log.Information("Sound-Entry Parameter gesetzt");
                         }
                         catch (Exception ex)
                         {
@@ -268,8 +282,9 @@ namespace Soundy.Pap
                 using (var bw = new BinaryWriter(fsOut))
                 {
                     pap.Write(bw);
-                    Plugin.Log.Error($"Pap erfolgreich geschrieben: {newPapPath}");
+                    Plugin.Log.Information($"Pap erfolgreich geschrieben: {newPapPath}");
                 }
+                try { if (File.Exists(hkxTemp)) File.Delete(hkxTemp); } catch { }
             }
             catch (Exception ex)
             {
