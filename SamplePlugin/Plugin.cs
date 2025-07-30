@@ -3,7 +3,6 @@ using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
-using System.IO;
 using Soundy.Windows;
 using ECommons;
 using ECommons.Automation;
@@ -32,6 +31,8 @@ namespace Soundy
 
         private ConfigWindow configWindow;
         private MainWindow mainWindow;
+        private readonly PenumbraApi penumbra;
+        private readonly PenumbraBridge penumbraBridge;
 
         public Plugin()
         {
@@ -45,6 +46,8 @@ namespace Soundy
             // ToolLoader.ExtractTools();
 
             ECommonsMain.Init(PluginInterface, this);
+            penumbra = new PenumbraApi();
+            penumbraBridge = new PenumbraBridge();
 
             // 3) Initialize GUI windows
             configWindow = new ConfigWindow(this);
@@ -90,13 +93,27 @@ namespace Soundy
             ToggleMainUI();
         }
 
-        public void RefreshMods()
+        public void ReloadAllMods()
         {
             Svc.Framework.RunOnTick(() =>
             {
-                Chat.Instance.SendMessage("/penumbra reload mods");
+                penumbra.ReloadAllMods();
             });
         }
+
+        /// <summary>
+        /// Reload a specific Penumbra mod by directory name.
+        /// </summary>
+        public void ReloadMod(string modDirectory)
+        {
+            Svc.Framework.RunOnTick(() =>
+            {
+                penumbraBridge.Reload(modDirectory);
+            });
+        }
+
+        // Backwards compatibility
+        public void RefreshMods() => ReloadAllMods();
 
         public void SendError(string message)
         {

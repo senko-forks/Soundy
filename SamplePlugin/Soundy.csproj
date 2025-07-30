@@ -26,6 +26,9 @@
       <Reference Include="ECommons">
         <HintPath>..\..\..\..\source\repos\lnjanos\peepingtim\ECommons\ECommons\bin\Debug\ECommons.dll</HintPath>
       </Reference>
+      <Reference Include="Penumbra.Api">
+        <HintPath>..\..\..\..\source\repos\Penumbra.Api\bin\Debug\Penumbra.Api.dll</HintPath>
+      </Reference>
       <Reference Include="VFXEditor">
         <HintPath>..\..\Dalamud-VFXEditor-34a06b479863c0b3b83ad322c441565f31bfba46\VFXEditor\bin\Debug\VFXEditor.dll</HintPath>
       </Reference>

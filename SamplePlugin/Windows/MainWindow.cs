@@ -91,7 +91,7 @@ namespace Soundy.Windows
             this.plugin = plugin;
             this.SizeConstraints = new WindowSizeConstraints
             {
-                MinimumSize = new Vector2(905, 600),
+                MinimumSize = new Vector2(905, 650),
                 MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
             };
             TitleBarButtons.Add(Support.NavBarBtn);
@@ -591,6 +591,10 @@ namespace Soundy.Windows
         private async Task DownloadConvertAsync()
         {
             saveName = SanitizeFileName(saveName.Trim());
+            if (createNewPlaylist)
+            {
+                playlistName = SanitizeFileName(playlistName.Trim());
+            }
             string tempMp3 = string.Empty;
             string finalOgg = string.Empty;
             try
@@ -775,7 +779,7 @@ namespace Soundy.Windows
                 papScanTask = null;
                 playlistsLoaded = false;
                 playlistLoadTask = null;
-                plugin.RefreshMods();
+                plugin.ReloadMod(selectedMod ?? string.Empty);
             }
             catch (Exception ex)
             {

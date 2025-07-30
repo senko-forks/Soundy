@@ -111,7 +111,7 @@ namespace Soundy.Windows
                             {
                                 // eigentliche Arbeit
                                 await PathHelpers.RunOneShotFixAsync(plugin.Configuration.PenumbraPath);
-                                plugin.RefreshMods();
+                                plugin.ReloadAllMods();
 
                                 // Erfolg
                                 fixStatus = "Fix done";
