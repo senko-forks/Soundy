@@ -20,7 +20,7 @@ namespace Soundy
         /// <param name="userVolume">Z. B. 1..5, was intern per linearer Funktion zu 1.0..3.5 (oder weniger) mappt.</param>
         /// <param name="applyLimiter">true, um Clipping abzufangen (empfohlen, wenn userVolume > 1.0).</param>
         /// <param name="quality">Wert zwischen 0..10 für libvorbis. 10 = Maximum. 7..8 oft schon sehr gut.</param>
-        public static async Task DownloadAndConvertAsync(string youtubeUrl, string outputOggFile, float userVolume, bool applyLimiter = true, int quality = 10, MainWindow main = null)
+        public static async Task DownloadAndConvertAsync(string youtubeUrl, string outputOggFile, float userVolume, bool applyLimiter = true, int quality = 10, float[]? eqGains = null, MainWindow? main = null)
         {
             // 1) Temporäre WAV-Datei
             string tempWav = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".wav");
@@ -41,7 +41,7 @@ namespace Soundy
                 // 3) ffmpeg-Aufruf -> OGG (libvorbis), 44100 Hz, Volume, optional Limiter
                 main.ChangeState("Converting MP3 to OGG...", true);
                 Plugin.Log.Information($"Converting MP3 to OGG:");
-                ConvertWavToOggHighQuality(tempAudio, outputOggFile, userVolume, applyLimiter, quality);
+                ConvertWavToOggHighQuality(tempAudio, outputOggFile, userVolume, applyLimiter, quality, eqGains);
             }
             finally
             {
@@ -58,11 +58,10 @@ namespace Soundy
             string oggOutput,
             float userVolume,
             bool useLimiter,
-            int quality)
+            int quality,
+            float[]? eqGains)
         {
             quality = 10;
-
-            userVolume = 1.5f;
 
             var filters = new List<string>();
 
@@ -73,9 +72,18 @@ namespace Soundy
             if (Math.Abs(userVolume - 1f) > 0.01f)
                 filters.Add($"volume={userVolume.ToString(CultureInfo.InvariantCulture)}");
 
+            if (eqGains != null && eqGains.Length >= 5)
+            {
+                var freqs = new[] { 60f, 230f, 910f, 3600f, 14000f };
+                for (int i = 0; i < freqs.Length; i++)
+                {
+                    if (Math.Abs(eqGains[i]) > 0.01f)
+                        filters.Add($"equalizer=f={freqs[i].ToString(CultureInfo.InvariantCulture)}:width_type=o:width=2:g={eqGains[i].ToString(CultureInfo.InvariantCulture)}");
+                }
+            }
+
             // ③ Limiter
-            if (useLimiter)
-                filters.Add("alimiter=limit=0.99");
+            filters.Add("alimiter=limit=0.97");
 
             // ④ HQ-Resampling (SoXR) – nur aktiv, wenn Quell-SR ≠ 44 100 Hz
             filters.Add("aresample=resampler=soxr:precision=33");

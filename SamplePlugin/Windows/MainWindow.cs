@@ -69,7 +69,7 @@ namespace Soundy.Windows
         private Task<List<string>>? playlistLoadTask;
 
         private bool showPapHelp = false;
-        private bool showAdvancedScd = false;
+        private bool showAdvancedAudio = false;
         private bool scdLoopEnabled = true;
 
         // Step-based progress for import process
@@ -351,9 +351,9 @@ namespace Soundy.Windows
                 ImGui.EndTable();
             }
 
-            if (ImGui.Button("Advanced SCD Editing"))
+            if (ImGui.Button("Advanced Audio Settings"))
             {
-                showAdvancedScd = true;
+                showAdvancedAudio = true;
             }
 
             ImGui.Spacing();
@@ -384,19 +384,36 @@ namespace Soundy.Windows
             ImGui.Spacing();
             DrawProcessStateUi();
 
-            if (showAdvancedScd)
+            if (showAdvancedAudio)
             {
-                ImGui.OpenPopup("AdvancedScdPopup");
-                showAdvancedScd = false;
+                ImGui.OpenPopup("AdvancedAudioPopup");
+                showAdvancedAudio = false;
             }
 
             bool advOpen = true;
-            ImGui.SetNextWindowSize(new Vector2(300, 100), ImGuiCond.Appearing);
-            if (ImGui.BeginPopupModal("AdvancedScdPopup", ref advOpen, ImGuiWindowFlags.AlwaysAutoResize))
+            ImGui.SetNextWindowSize(new Vector2(450, 180), ImGuiCond.Appearing);
+            if (ImGui.BeginPopupModal("AdvancedAudioPopup", ref advOpen, ImGuiWindowFlags.AlwaysAutoResize))
             {
                 ImGui.Checkbox("Enable Loop", ref scdLoopEnabled);
+                ImGui.Separator();
+
+                int presetIndex = (int)plugin.Configuration.EqPreset;
+                if (ImGui.Combo("EQ Preset", ref presetIndex, AudioPresetData.Names, AudioPresetData.Names.Length))
+                {
+                    plugin.Configuration.EqPreset = (AudioPreset)presetIndex;
+                    plugin.Configuration.Save();
+                }
+
+                float presetVolume = plugin.Configuration.Volume;
+                if (ImGui.SliderFloat("Volume", ref presetVolume, 1.0f, 5.0f, "%.1f"))
+                {
+                    plugin.Configuration.Volume = Math.Clamp(presetVolume, 1.0f, 5.0f);
+                    plugin.Configuration.Save();
+                }
+
                 if (ImGui.Button("Close"))
                 {
+                    plugin.Configuration.Save();
                     ImGui.CloseCurrentPopup();
                 }
                 ImGui.EndPopup();
@@ -657,9 +674,10 @@ namespace Soundy.Windows
                     await YoutubeDownloadAndConvert.DownloadAndConvertAsync(
                         youtubeUrl: youtubeLink,
                         outputOggFile: finalOgg,
-                        userVolume: 1.0f,   // -> ~2.0-Faktor => +6 dB
+                        userVolume: plugin.Configuration.Volume,   // -> ~2.0-Faktor => +6 dB
                         applyLimiter: true, // Verhindert hartes Clipping
-                        quality: 5,         // Höchste Vorbis-Qualität
+                        quality: 10,         // Höchste Vorbis-Qualität
+                        eqGains: AudioPresetData.GetGains(plugin.Configuration.EqPreset),
                         main: this
                     );
                 });
