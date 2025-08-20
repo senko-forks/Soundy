@@ -20,9 +20,6 @@ namespace Soundy
         /// <param name="reportProgress">Callback to report download progress.</param>
         public static async Task InitializeToolsAsync(Action<string> reportProgress, Plugin plugin)
         {
-            if (toolsInitialized)
-                return;
-
             var config = plugin.Configuration;
 
             // Ensure the base directory exists
@@ -65,9 +62,32 @@ namespace Soundy
                 {
                     throw new FileNotFoundException("Failed to extract tools from the ZIP.");
                 }
+            } else
+            {
+                reportProgress("Tools not found, re-downloading...");
+                // Download ffmpeg if missing
+                if (config.ffmpegMissing)
+                {
+                    reportProgress("Downloading ffmpeg...");
+                    string ffmpegZipPath = Path.Combine(Path.GetTempPath(), "ffmpeg.zip");
+                    await DownloadFileAsync(config.ffmpegZipUrl, ffmpegZipPath, reportProgress);
+                    ExtractZip(ffmpegZipPath, Configuration.ToolsPath);
+                    File.Delete(ffmpegZipPath);
+                }
+                // Download yt-dlp if missing
+                if (config.ytdlpMissing)
+                {
+                    reportProgress("Downloading yt-dlp...");
+                    string ytdlpZipPath = Path.Combine(Path.GetTempPath(), "yt-dlp.zip");
+                    await DownloadFileAsync(config.ytdlpUrl, ytdlpZipPath, reportProgress);
+                    ExtractZip(ytdlpZipPath, Configuration.ToolsPath);
+                    File.Delete(ytdlpZipPath);
+                }
+                // Verify tools after download
+                VerifyTools(plugin);
             }
 
-            toolsInitialized = true;
+                toolsInitialized = true;
         }
 
         /// <summary>
@@ -136,8 +156,6 @@ namespace Soundy
         /// </summary>
         public static void VerifyTools(Plugin plugin)
         {
-            if (toolsInitialized)
-                return;
 
             var config = plugin.Configuration;
             var toolsDir = Configuration.ToolsPath;
@@ -157,11 +175,13 @@ namespace Soundy
             
             if (!File.Exists(FfmpegPath))
             {
+                plugin.Configuration.ffmpegMissing = true;
                 throw new FileNotFoundException($"ffmpeg.exe not found in {toolsDir}");
             }
 
             if (!File.Exists(YtdlpPath))
             {
+                plugin.Configuration.ytdlpMissing = true;
                 throw new FileNotFoundException($"yt-dlp.exe not found in {toolsDir}");
             }
 

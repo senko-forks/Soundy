@@ -66,7 +66,7 @@ internal sealed class PenumbraApi
         {
             Svc.Framework.RunOnTick(() =>
             {
-                Chat.Instance.SendMessage("/penumbra reload");
+                Chat.SendMessage("/penumbra reload");
             });
         }
         catch (Exception)

@@ -4,7 +4,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using ECommons.DalamudServices;
 using Soundy.FileAnalyzer;
 using Soundy.Pap;
@@ -108,6 +108,7 @@ namespace Soundy.Windows
             // 1) Tools-Download-Check
             if (!plugin.Configuration.AreToolsDownloaded)
             {
+                ImGui.TextColored(new Vector4(1, 0, 0, 1), $"{plugin.Configuration.AreToolsDownloaded}");
                 DrawDownloadToolsUi();
                 return;
             }
@@ -120,10 +121,7 @@ namespace Soundy.Windows
             catch (Exception ex)
             {
                 ImGui.TextColored(new Vector4(1, 0, 0, 1), $"Tool verification failed: {ex.Message}");
-                if (ImGui.Button("Re-download Tools"))
-                {
-                    StartDownloadTools();
-                }
+                DrawDownloadToolsUi();
                 return;
             }
 
@@ -429,7 +427,7 @@ namespace Soundy.Windows
             {
                 ImGui.Text($"Downloading tools... {downloadProgress}");
                 float progressValue = 0.0f;
-                if (double.TryParse(downloadProgress.Replace("%", ""), out double p))
+                if (double.TryParse(downloadProgress.Replace("%", "").Replace(",", "."), out double p))
                 {
                     progressValue = (float)(p / 100.0);
                 }

@@ -17,29 +17,22 @@ namespace Soundy
 
         // ▸ Default = true, weil Neuinstallationen nichts aufräumen müssen
         public bool TempCleanupDone { get; set; } = true;
+        public bool ffmpegMissing { get; set; } = false;
+        public bool ytdlpMissing { get; set; } = false;
 
         public int Choice { get; set; }
-        public string ToolsZipUrl { get; set; } =
+        public readonly string ToolsZipUrl =
             "https://github.com/lnjanos/yueImport/releases/download/release/tools.zip";
+
+        public readonly string ffmpegZipUrl =
+            "https://github.com/lnjanos/yueImport/releases/download/release/ffmpeg.zip";
+
+        public readonly string ytdlpUrl =
+            "https://github.com/lnjanos/yueImport/releases/download/release/yt-dlp.zip"; 
 
         public static string BasePath => Plugin.PluginInterface.GetPluginConfigDirectory();
         public static string ToolsPath => Path.Combine(BasePath, "tools");
         public static string Resources => Path.Combine(BasePath, "resources");
-
-        /* ----------------  MIGRATION CALLBACK  ---------------- */
-        [OnDeserialized]                     // wird NACH dem Laden aufgerufen
-        private void Migrate(StreamingContext _)
-        {
-            if (Version < CurrentConfigVersion)   // ⇒ Upgrade von 1.0
-            {
-                TempCleanupDone = false;          // Cleanup einmalig nötig
-                Version = CurrentConfigVersion;
-                Save();                           // gleich wegschreiben
-            }
-            // Neuinstallationen kommen hier gar nicht rein (Version==2),
-            // TempCleanupDone bleibt daher auf true.
-        }
-        /* ------------------------------------------------------ */
 
         public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
     }

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Dalamud.NET.SDK/11.0.0">
+<Project Sdk="Dalamud.NET.SDK/13.0.0">
   <PropertyGroup>
-    <Version>1.2.1.0</Version>
-    <Description>A sample plugin.</Description>
+    <Version>1.4.5.0</Version>
+    <Description>YT to Penumbra.</Description>
     <PackageProjectUrl>https://github.com/goatcorp/SamplePlugin</PackageProjectUrl>
     <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
     <IsPackable>false</IsPackable>
@@ -10,10 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="..\Data\goat.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Visible>false</Visible>
-    </Content>
     <Content Include="Soundy.json" />
   </ItemGroup>
 
@@ -30,12 +26,12 @@
         <HintPath>..\..\..\..\source\repos\Penumbra.Api\bin\Debug\Penumbra.Api.dll</HintPath>
       </Reference>
       <Reference Include="VFXEditor">
-        <HintPath>..\..\Dalamud-VFXEditor-34a06b479863c0b3b83ad322c441565f31bfba46\VFXEditor\bin\Debug\VFXEditor.dll</HintPath>
+        <HintPath>..\..\..\..\source\repos\Dalamud-VFXEditor-Original\VFXEditor\bin\Debug\VFXEditor.dll</HintPath>
       </Reference>
     </ItemGroup>
 
     <ItemGroup>
-    <PackageReference Update="DalamudPackager" Version="12.0.0" />
+    <PackageReference Update="DalamudPackager" Version="13.0.0" />
     <PackageReference Update="DotNet.ReproducibleBuilds" Version="1.2.25" />
   </ItemGroup>
 </Project>

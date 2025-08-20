@@ -3,7 +3,7 @@ using ECommons.DalamudServices;
 using ECommons.EzSharedDataManager;
 using ECommons.ImGuiMethods;
 using ECommons;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -88,7 +88,7 @@ namespace Soundy.Windows
             var spaceWidth = ImGui.CalcTextSize(" ").X;
             ImGui.BeginDisabled();
             ImGui.PushStyleVar(ImGuiStyleVar.Alpha, 0f);
-            if (ImGuiEx.BeginTabItem(" ".Repeat((int)MathF.Ceiling(textWidth / spaceWidth)), ImGuiTabItemFlags.Trailing))
+            if (ImGui.BeginTabItem(" ".Repeat((int)MathF.Ceiling(textWidth / spaceWidth)), ImGuiTabItemFlags.Trailing))
             {
                 ImGui.EndTabItem();
             }
