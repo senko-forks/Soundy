@@ -1,8 +1,10 @@
+using Soundy.Windows;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
-using System.Diagnostics;
-using Soundy.Windows;
 
 namespace Soundy
 {
@@ -28,18 +30,18 @@ namespace Soundy
                 // 2) Via yt-dlp nur Audio extrahieren -> WAV
                 //    So haben wir "verlustfrei" das Audio, das YouTube anbietet
                 main.ChangeState("Downloading audio...");
-                await YoutubeDownloader.DownloadAudioAsync(youtubeUrl, tempWav, useMp3: true);
+                string tempAudio = await YoutubeDownloader.DownloadAudioAsync(youtubeUrl, tempWav, useMp3: true);
                 // useMp3:true => wir haben "wav" eingetragen -> yt-dlp generiert "wav"
 
-                if (!File.Exists(tempWav))
+                if (!File.Exists(tempAudio))
                 {
-                    throw new FileNotFoundException("yt-dlp did not produce the expected WAV file.", tempWav);
+                    throw new FileNotFoundException("yt-dlp did not produce the expected WAV file.", tempAudio);
                 }
 
                 // 3) ffmpeg-Aufruf -> OGG (libvorbis), 44100 Hz, Volume, optional Limiter
                 main.ChangeState("Converting MP3 to OGG...", true);
                 Plugin.Log.Information($"Converting MP3 to OGG:");
-                ConvertWavToOggHighQuality(tempWav, outputOggFile, userVolume, applyLimiter, quality);
+                ConvertWavToOggHighQuality(tempAudio, outputOggFile, userVolume, applyLimiter, quality);
             }
             finally
             {
@@ -58,62 +60,41 @@ namespace Soundy
             bool useLimiter,
             int quality)
         {
-            // clamp
-            quality = Math.Clamp(quality, 0, 10);
+            quality = 10;
 
-            // z. B. lineare Skala userVolume=1..5 -> factor=1.0..2.0 (oder so)
-            //float volumeFactor = UserValueToVolumeFactor(userVolume);
-            float volumeFactor = 2.0f;
+            userVolume = 1.5f;
 
-            // Limiter hinzufügen?
-            //   Falls du die Bässe nicht clippen willst, macht "alimiter" Sinn.
-            //   So z. B.: "volume=1.8,alimiter=limit=0.98"
-            var filterParts = $"volume={volumeFactor.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
-            if (useLimiter && volumeFactor > 1.0f)
-            {
-                filterParts += ",alimiter=limit=0.99";
-            }
+            var filters = new List<string>();
 
-            // Falls userVolume ~1 => kein Filter
-            // Ggf. ab userVolume>1.01 => Filter
-            string filterArg = (Math.Abs(volumeFactor - 1.0f) > 0.01f || useLimiter)
-                ? $"-filter:a \"{filterParts}\""
-                : ""; // kein Filter
+            // ① EBU R128 Loudness (–16 LUFS, 11 LRA, –1 dBTP)
+            filters.Add("loudnorm=I=-16:LRA=11:TP=-1.0");
 
-            // ffmpeg: -y -> überschreibt Ziel ohne Rückfrage
-            //         -ac 2 -> stereo
-            //         -ar 44100 -> sample rate
-            //         -c:a libvorbis -> Vorbis
-            //         -q:a <x>  -> 0..10 (10 = max. Qualität)
-            string args = $"-y -i \"{wavInput}\" " +
-                          "-vn -map_metadata -1 " +
-                          "-ac 2 -ar 44100 " +
-                          $"{filterArg} " +
-                          $"-c:a libvorbis -q:a {quality} " +
-                          $"\"{oggOutput}\"";
+            // ② Zusätzlicher Gain (nur falls ≠1)
+            if (Math.Abs(userVolume - 1f) > 0.01f)
+                filters.Add($"volume={userVolume.ToString(CultureInfo.InvariantCulture)}");
+
+            // ③ Limiter
+            if (useLimiter)
+                filters.Add("alimiter=limit=0.99");
+
+            // ④ HQ-Resampling (SoXR) – nur aktiv, wenn Quell-SR ≠ 44 100 Hz
+            filters.Add("aresample=resampler=soxr:precision=33");
+
+            // ⑤ ffmpeg-Args
+            string args =
+                $"-y -i \"{wavInput}\" -vn -map_metadata -1 " +
+                $"-af \"{string.Join(',', filters)}\" " +
+                "-ar 44100 -ac 2 " +
+                $"-c:a libvorbis -q:a {quality} -compression_level 10 " +
+                $"\"{oggOutput}\"";
 
             RunFfmpeg(args);
         }
 
-
-        /// <summary>Ganz einfache lineare Funktion: [1..5] -> [1..2] o.Ä. 
-        /// Entweder selbst anpassen, z. B. max=1.8 usw.</summary>
-        private static float UserValueToVolumeFactor(float userValue)
-        {
-            userValue = Math.Clamp(userValue, 1.0f, 10.0f);
-            // Beispiel: 1 => 1.0 , 5 => 2.0
-            // (2.0 - 1.0)/(5-1)=0.25 => 1 + (userValue-1)*0.25 => 1..2
-            // Du kannst es auch so lösen:
-            float minVol = 1.0f;
-            float maxVol = 10.0f; // hier 2.0 = +6dB
-            return minVol + (userValue - 1f) * ((maxVol - minVol) / 4f);
-        }
-
-
         /// <summary>
         /// Startet einen ffmpeg-Prozess synchron (ggf. async), wirf Exception bei Fehler.
         /// </summary>
-        private static void RunFfmpeg(string arguments, int timeoutMs = 60_000)
+        private static void RunFfmpeg(string arguments, int timeoutMs = 180_000)
         {
             var exePath = ToolLoader.FfmpegPath;
 

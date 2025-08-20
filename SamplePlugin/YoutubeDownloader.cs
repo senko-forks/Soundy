@@ -1,5 +1,8 @@
 using System;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Security.Policy;
 using System.Threading.Tasks;
 using System.Web; // Für URL-Parsing, benötigt .NET Framework oder entsprechendes Paket
 
@@ -21,24 +24,26 @@ namespace Soundy
         /// <param name="youtubeUrl">Die YouTube-URL (z. B. https://youtube.com/watch?v=123)</param>
         /// <param name="outputFile">Zielpfad, z. B. "C:\XY\mysong.mp3" oder ".ogg"</param>
         /// <param name="useMp3">true = MP3, false = Vorbis/OGG</param>
-        public static async Task DownloadAudioAsync(string youtubeUrl, string outputFile, bool useMp3 = true)
+        public static async Task<string> DownloadAudioAsync(string youtubeUrl, string outputFile, bool useMp3 = true)
         {
-            // Pfad zu yt-dlp
-            var exePath = ToolLoader.YtdlpPath;
+            string basePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            // Der Platzhalter %(ext)s wird von yt-dlp mit der Original-Extension ersetzt
+            string outTemplate = basePath + ".%(ext)s";
 
-            // Argumente zusammenstellen
-            // --extract-audio -> extrahiert nur den Audio-Stream
-            // --audio-format -> mp3 oder vorbis
-            // --audio-quality 0 -> beste Qualität
-            // --no-playlist -> ignoriert Playlists und lädt nur das einzelne Video
-            // -o "<Pfad>"
-            string format = useMp3 ? "wav" : "vorbis";
+            string args =
+                $"-f bestaudio --no-playlist -o \"{outTemplate}\" \"{youtubeUrl}\"";
 
-            string args = $"--extract-audio --audio-format {format} --audio-quality 0 --no-playlist -o \"{outputFile}\" \"{youtubeUrl}\"";
+            await RunProcessAsync(ToolLoader.YtdlpPath, args);
 
-            Plugin.Log.Information($"[yt-dlp] Starte Prozess mit Argumenten: {args}");
+            // Tatsächliche Datei finden (z. B. .opus oder .m4a)
+            string dir = Path.GetDirectoryName(basePath)!;
+            string prefix = Path.GetFileName(basePath);
+            string downloaded = Directory.GetFiles(dir, prefix + ".*").FirstOrDefault();
 
-            await RunProcessAsync(exePath, args);
+            if (downloaded == null)
+                throw new FileNotFoundException("yt-dlp did not produce an audio file.");
+
+            return downloaded;
         }
 
         private static async Task RunProcessAsync(string exePath, string arguments)
