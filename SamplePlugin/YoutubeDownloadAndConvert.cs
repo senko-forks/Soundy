@@ -1,3 +1,5 @@
+using Dalamud.Interface.Windowing;
+using ECommons.DalamudServices;
 using Soundy.Windows;
 using System;
 using System.Collections.Generic;
@@ -20,7 +22,7 @@ namespace Soundy
         /// <param name="userVolume">Z. B. 1..5, was intern per linearer Funktion zu 1.0..3.5 (oder weniger) mappt.</param>
         /// <param name="applyLimiter">true, um Clipping abzufangen (empfohlen, wenn userVolume > 1.0).</param>
         /// <param name="quality">Wert zwischen 0..10 für libvorbis. 10 = Maximum. 7..8 oft schon sehr gut.</param>
-        public static async Task DownloadAndConvertAsync(string youtubeUrl, string outputOggFile, float userVolume, bool applyLimiter = true, int quality = 10, float[]? eqGains = null, MainWindow? main = null)
+        public static async Task DownloadAndConvertAsync(string youtubeUrl, string outputOggFile, float userVolume, bool applyLimiter = true, int quality = 10, float[]? eqGains = null, MainWindow? mainwindow = null, VfxSoundyWindow? vfxwíndow = null)
         {
             // 1) Temporäre WAV-Datei
             string tempWav = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".wav");
@@ -29,7 +31,11 @@ namespace Soundy
             {
                 // 2) Via yt-dlp nur Audio extrahieren -> WAV
                 //    So haben wir "verlustfrei" das Audio, das YouTube anbietet
-                main.ChangeState("Downloading audio...");
+                if (mainwindow!= null)
+                    mainwindow.ChangeState("Downloading audio...");
+                if (vfxwíndow != null)
+                    vfxwíndow.ChangeState("Downloading audio...");
+
                 string tempAudio = await YoutubeDownloader.DownloadAudioAsync(youtubeUrl, tempWav, useMp3: true);
                 // useMp3:true => wir haben "wav" eingetragen -> yt-dlp generiert "wav"
 
@@ -39,7 +45,10 @@ namespace Soundy
                 }
 
                 // 3) ffmpeg-Aufruf -> OGG (libvorbis), 44100 Hz, Volume, optional Limiter
-                main.ChangeState("Converting MP3 to OGG...", true);
+                if (mainwindow != null)
+                    mainwindow.ChangeState("Converting MP3 to OGG...", true);
+                if (vfxwíndow != null)
+                    vfxwíndow.ChangeState("Converting MP3 to OGG...", true);
                 Plugin.Log.Information($"Converting MP3 to OGG:");
                 ConvertWavToOggHighQuality(tempAudio, outputOggFile, userVolume, applyLimiter, quality, eqGains);
             }
@@ -65,38 +74,47 @@ namespace Soundy
 
             var filters = new List<string>();
 
-            // ① EBU R128 Loudness (–16 LUFS, 11 LRA, –1 dBTP)
+            // ① Zeitstempel stabilisieren (Bugfix für Opus/WebM)
+            filters.Add("asetpts=PTS-STARTPTS");
+
+            // ② HQ-Resampling (SoXR) direkt nach PTS-Fix
+            filters.Add("aresample=resampler=soxr:precision=33");
+
+            // ③ EBU R128 Loudness (–16 LUFS, 11 LRA, –1 dBTP)
             filters.Add("loudnorm=I=-16:LRA=11:TP=-1.0");
 
-            // ② Zusätzlicher Gain (nur falls ≠1)
+            // ④ Zusätzlicher Gain (nur falls ≠1)
             if (Math.Abs(userVolume - 1f) > 0.01f)
                 filters.Add($"volume={userVolume.ToString(CultureInfo.InvariantCulture)}");
 
+            // ⑤ Equalizer-Bänder
             if (eqGains != null && eqGains.Length >= 5)
             {
                 var freqs = new[] { 60f, 230f, 910f, 3600f, 14000f };
                 for (int i = 0; i < freqs.Length; i++)
                 {
                     if (Math.Abs(eqGains[i]) > 0.01f)
-                        filters.Add($"equalizer=f={freqs[i].ToString(CultureInfo.InvariantCulture)}:width_type=o:width=2:g={eqGains[i].ToString(CultureInfo.InvariantCulture)}");
+                        filters.Add(
+                            $"equalizer=f={freqs[i].ToString(CultureInfo.InvariantCulture)}" +
+                            $":width_type=o:width=2:g={eqGains[i].ToString(CultureInfo.InvariantCulture)}"
+                        );
                 }
             }
 
-            // ③ Limiter
+            // ⑥ Limiter (immer als letztes Filter!)
             filters.Add("alimiter=limit=0.97");
 
-            // ④ HQ-Resampling (SoXR) – nur aktiv, wenn Quell-SR ≠ 44 100 Hz
-            filters.Add("aresample=resampler=soxr:precision=33");
-
-            // ⑤ ffmpeg-Args
+            // ⑦ ffmpeg-Args mit Stabilizer-Flags
             string args =
-                $"-y -i \"{wavInput}\" -vn -map_metadata -1 " +
+                "-y -fflags +genpts -avoid_negative_ts make_zero " +  // <— global stabilizer
+                $"-i \"{wavInput}\" -vn -map_metadata -1 " +
                 $"-af \"{string.Join(',', filters)}\" " +
                 "-ar 44100 -ac 2 " +
                 $"-c:a libvorbis -q:a {quality} -compression_level 10 " +
                 $"\"{oggOutput}\"";
 
             RunFfmpeg(args);
+
         }
 
         /// <summary>

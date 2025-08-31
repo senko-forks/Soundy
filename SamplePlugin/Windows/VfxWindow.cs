@@ -24,7 +24,7 @@ using System.Text.RegularExpressions;
 
 namespace Soundy.Windows
 {
-    public class MainWindow : Window, IDisposable
+    public class VfxSoundyWindow : Window, IDisposable
     {
         private readonly Plugin plugin;
 
@@ -85,8 +85,8 @@ namespace Soundy.Windows
         };
         private int currentStep = -1;
 
-        public MainWindow(Plugin plugin)
-            : base("Soundy", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
+        public VfxSoundyWindow(Plugin plugin)
+            : base("Soundy Vfx", ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)
         {
             this.plugin = plugin;
             this.SizeConstraints = new WindowSizeConstraints
@@ -678,7 +678,7 @@ namespace Soundy.Windows
                         applyLimiter: true, // Verhindert hartes Clipping
                         quality: 10,         // Höchste Vorbis-Qualität
                         eqGains: AudioPresetData.GetGains(plugin.Configuration.EqPreset),
-                        mainwindow: this
+                        vfxwíndow: this
                     );
                 });
 

@@ -7,6 +7,7 @@ using Soundy.Windows;
 using ECommons;
 using ECommons.Automation;
 using ECommons.DalamudServices;
+using System;
 
 namespace Soundy
 {
@@ -31,6 +32,7 @@ namespace Soundy
 
         private ConfigWindow configWindow;
         private MainWindow mainWindow;
+        private VfxSoundyWindow vfxSoundyWindow;
         private readonly PenumbraApi penumbra;
         private readonly PenumbraBridge penumbraBridge;
 
@@ -52,6 +54,9 @@ namespace Soundy
             // 3) Initialize GUI windows
             configWindow = new ConfigWindow(this);
             mainWindow = new MainWindow(this);
+            vfxSoundyWindow = new VfxSoundyWindow(this);
+
+            windowSystem.AddWindow(vfxSoundyWindow);
 
             windowSystem.AddWindow(configWindow);
             windowSystem.AddWindow(mainWindow);
@@ -61,6 +66,7 @@ namespace Soundy
             {
                 HelpMessage = "Open Soundy's main window."
             });
+
 
             // 5) Register UI callbacks
             PluginInterface.UiBuilder.Draw += DrawUI;
@@ -79,6 +85,7 @@ namespace Soundy
             // Dispose windows
             configWindow?.Dispose();
             mainWindow?.Dispose();
+            vfxSoundyWindow?.Dispose();
 
             // Remove command handler
             CommandManager.RemoveHandler(CommandName);
@@ -90,7 +97,12 @@ namespace Soundy
         private void OnCommand(string command, string args)
         {
             // Toggle Main Window
-            ToggleMainUI();
+            if (args.Trim().Equals("vfx", StringComparison.OrdinalIgnoreCase))
+                vfxSoundyWindow.Toggle();
+            else if (args.Trim().Equals("config", StringComparison.OrdinalIgnoreCase))
+                ToggleConfigUI();
+            else
+                ToggleMainUI();
         }
 
         public void ReloadAllMods()
