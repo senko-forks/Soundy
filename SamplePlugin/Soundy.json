@@ -16,7 +16,7 @@
     "TestingAssemblyVersion": "1.4.4.0",
     "RepoUrl": "https://github.com/lnjanos",
     "ApplicableVersion": "any",
-    "DalamudApiLevel": 13,
+    "DalamudApiLevel": 14,
     "TestingDalamudApiLevel": 12,
     "IsHide": "False",
     "IsTestingExclusive": "False",
