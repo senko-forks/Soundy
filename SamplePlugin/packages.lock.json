@@ -20,6 +20,35 @@
         "resolved": "3.1.0.10",
         "contentHash": "afgAdXz9ykESACvgssr9PXsPb8i7ZwSyqw58IGzgURUxkH8Hm1qIxwzybLDE5Eo8BXr4nESGqcRqEpbviH4/3g=="
       },
+      "HelixToolkit": {
+        "type": "Direct",
+        "requested": "[3.1.2, )",
+        "resolved": "3.1.2",
+        "contentHash": "SicJqlyFmG7ub5o7cxUbYK3wb0EJCe7v+MIuQS4f9nKyc3EZ0VK92ptCHzVI1AJOPGWIod7pfZoA3F99Nu1M/g==",
+        "dependencies": {
+          "CommunityToolkit.Common": "8.3.2",
+          "CommunityToolkit.Diagnostics": "8.3.2",
+          "CommunityToolkit.Mvvm": "8.3.2",
+          "Microsoft.Extensions.Logging.Abstractions": "8.0.2"
+        }
+      },
+      "HelixToolkit.SharpDX.Core": {
+        "type": "Direct",
+        "requested": "[2.27.3, )",
+        "resolved": "2.27.3",
+        "contentHash": "4ZcLkR1+YIDd0EHVOJ/sJa/mGRkj3/Bqk4FIioeiLVRY29q3HRScKlQiQjFIcw/XtSWYODnOS0ofT0ZV/+hXbg==",
+        "dependencies": {
+          "Cyotek.Drawing.BitmapFont": "2.0.0",
+          "HelixToolkit": "[2.27.3]",
+          "Microsoft.Extensions.Logging.Abstractions": "6.0.0",
+          "SharpDX": "4.2.0",
+          "SharpDX.D3DCompiler": "4.2.0",
+          "SharpDX.DXGI": "4.2.0",
+          "SharpDX.Direct2D1": "4.2.0",
+          "SharpDX.Direct3D11": "4.2.0",
+          "SharpDX.Mathematics": "4.2.0"
+        }
+      },
       "NAudio": {
         "type": "Direct",
         "requested": "[2.2.1, )",
@@ -46,14 +75,6 @@
         "resolved": "5.13.1",
         "contentHash": "kmpqhcbnnF+Ib0F9g7+1W17IbZ8Q8G2zn3MJURd/rmQiB3D7cm8YS2JRmvhDzrN5w9OMlfq7MFxVtwG419YkIA=="
       },
-      "BCnEncoder.Net": {
-        "type": "Transitive",
-        "resolved": "2.2.1",
-        "contentHash": "tI5+/OQo0kciLqWrViRjpOH+IL3FjexYnoWZajiGV41g/EM9CGbWsxsPzBDmpoxNkrV9uox/EtIhCIi9chBSFw==",
-        "dependencies": {
-          "CommunityToolkit.HighPerformance": "8.4.0"
-        }
-      },
       "CommunityToolkit.Common": {
         "type": "Transitive",
         "resolved": "8.3.2",
@@ -64,11 +85,6 @@
         "resolved": "8.3.2",
         "contentHash": "YyMsBE9lT0pJg2bEDzlfEWdlk6xHExW6jr1dxC7+YUqqVmOGL5nZROpxbXQRTe5TrfIs7BvkVsGULv/hq6tGIA=="
       },
-      "CommunityToolkit.HighPerformance": {
-        "type": "Transitive",
-        "resolved": "8.4.0",
-        "contentHash": "flxspiBs0G/0GMp7IK2J2ijV9bTG6hEwFc/z6ekHqB6nwRJ4Ry2yLdx+TkbCUYFCl4XhABkAwomeKbT6zM2Zlg=="
-      },
       "CommunityToolkit.Mvvm": {
         "type": "Transitive",
         "resolved": "8.3.2",
@@ -78,43 +94,6 @@
         "type": "Transitive",
         "resolved": "2.0.0",
         "contentHash": "t6vYF0sXgNb6dP9QNbJxJWw3RdCEWC6Llv47oPYpobYAhmKcgmAZJv6HXK03DEUmo7ff6yPvsyEWTkia+UAONw=="
-      },
-      "Google.FlatBuffers": {
-        "type": "Transitive",
-        "resolved": "25.2.10",
-        "contentHash": "z3ykbSRsy6oqMzeZ84a+K8rnMJ/ysVikar8r2yUhHz0HSxIjBpj53mZvpu6LjLEm5fLLWQsCdelJwL1nu7lloA=="
-      },
-      "HelixToolkit": {
-        "type": "Transitive",
-        "resolved": "3.1.2",
-        "contentHash": "SicJqlyFmG7ub5o7cxUbYK3wb0EJCe7v+MIuQS4f9nKyc3EZ0VK92ptCHzVI1AJOPGWIod7pfZoA3F99Nu1M/g==",
-        "dependencies": {
-          "CommunityToolkit.Common": "8.3.2",
-          "CommunityToolkit.Diagnostics": "8.3.2",
-          "CommunityToolkit.Mvvm": "8.3.2",
-          "Microsoft.Extensions.Logging.Abstractions": "8.0.2"
-        }
-      },
-      "HelixToolkit.SharpDX.Core": {
-        "type": "Transitive",
-        "resolved": "2.27.3",
-        "contentHash": "4ZcLkR1+YIDd0EHVOJ/sJa/mGRkj3/Bqk4FIioeiLVRY29q3HRScKlQiQjFIcw/XtSWYODnOS0ofT0ZV/+hXbg==",
-        "dependencies": {
-          "Cyotek.Drawing.BitmapFont": "2.0.0",
-          "HelixToolkit": "[2.27.3]",
-          "Microsoft.Extensions.Logging.Abstractions": "6.0.0",
-          "SharpDX": "4.2.0",
-          "SharpDX.D3DCompiler": "4.2.0",
-          "SharpDX.DXGI": "4.2.0",
-          "SharpDX.Direct2D1": "4.2.0",
-          "SharpDX.Direct3D11": "4.2.0",
-          "SharpDX.Mathematics": "4.2.0"
-        }
-      },
-      "mgholam.fastCSV": {
-        "type": "Transitive",
-        "resolved": "2.0.9",
-        "contentHash": "AOFqanoVebasDk/X1qm7X9/q/UwTz6/fpNFfqsEh6K1euTV9CxknPIhlLpo6CHlhiyMUs1/vv+g+KE8C8VYGcg=="
       },
       "Microsoft.Extensions.DependencyInjection.Abstractions": {
         "type": "Transitive",
@@ -153,15 +132,6 @@
         "contentHash": "6r23ylGo5aeP02WFXsPquz0T0hFJWyh+7t++tz19tc3Kr38NHm+Z9j+FiAv+xkH8tZqXJqus9Q8p6u7bidIgbw==",
         "dependencies": {
           "NAudio.Core": "2.2.1"
-        }
-      },
-      "NAudio.Vorbis": {
-        "type": "Transitive",
-        "resolved": "1.5.0",
-        "contentHash": "llJMmUnFf0FGf4G1FKNftxt+Vc1CvBCSul0Ugbv/RahGbpKF2p+ujSEJHybPjl9b4FjbK8O2vRFIcRGcVfAooA==",
-        "dependencies": {
-          "NAudio.Core": "2.0.0",
-          "NVorbis": "0.10.4"
         }
       },
       "NAudio.Wasapi": {
@@ -249,58 +219,6 @@
         "dependencies": {
           "NETStandard.Library": "1.6.1",
           "SharpDX": "4.2.0"
-        }
-      },
-      "SharpGLTF.Core": {
-        "type": "Transitive",
-        "resolved": "1.0.5",
-        "contentHash": "HNHKPqaHXm7R1nlXZ764K5UI02IeDOQ5DQKLjwYUVNTsSW27jJpw+wLGQx6ZFoiFYqUlyZjmsu+WfEak2GmJAg=="
-      },
-      "SharpGLTF.Runtime": {
-        "type": "Transitive",
-        "resolved": "1.0.5",
-        "contentHash": "EVP32k4LqERxSVICiupT8xQvhHSHJCiXajBjNpqdfdajtREHayuVhH0Jmk6uSjTLX8/IIH9XfT34sw3TwvCziw==",
-        "dependencies": {
-          "SharpGLTF.Core": "1.0.5"
-        }
-      },
-      "SharpGLTF.Toolkit": {
-        "type": "Transitive",
-        "resolved": "1.0.5",
-        "contentHash": "piQKk7PH2pSWQSQmCSd8cYPaDtAy/ppAD+Mrh2RUhhHI8awl81HqqLyAauwQhJwea3LNaiJ6f4ehZuOGk89TlA==",
-        "dependencies": {
-          "SharpGLTF.Runtime": "1.0.5"
-        }
-      },
-      "TeximpNet": {
-        "type": "Transitive",
-        "resolved": "1.4.3",
-        "contentHash": "uNjTMP4Cv5jI/a/f5iqLpxaQ/aNAE7XKm9S08EEB6W3UMW82/qmcoLRkYjm+2bxBQJ3C5RU9VLu7/pRxavuYJQ==",
-        "dependencies": {
-          "NETStandard.Library": "1.6.1"
-        }
-      },
-      "penumbra.string": {
-        "type": "Project"
-      },
-      "vfxeditor": {
-        "type": "Project",
-        "dependencies": {
-          "BCnEncoder.Net": "[2.2.1, )",
-          "DalamudPackager": "[14.0.1, )",
-          "Google.FlatBuffers": "[25.2.10, )",
-          "HelixToolkit": "[3.1.2, )",
-          "HelixToolkit.SharpDX.Core": "[2.27.3, )",
-          "NAudio.Core": "[2.2.1, )",
-          "NAudio.Vorbis": "[1.5.0, )",
-          "NAudio.Wasapi": "[2.2.1, )",
-          "NAudio.WinMM": "[2.2.1, )",
-          "Penumbra.Api": "[5.13.1, )",
-          "Penumbra.String": "[1.0.7, )",
-          "SharpDX.D3DCompiler": "[4.2.0, )",
-          "SharpGLTF.Toolkit": "[1.0.5, )",
-          "TeximpNet": "[1.4.3, )",
-          "mgholam.fastCSV": "[2.0.9, )"
         }
       }
     }
